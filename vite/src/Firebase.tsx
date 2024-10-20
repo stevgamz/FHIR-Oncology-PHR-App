@@ -1,6 +1,7 @@
 // // Import the functions you need from the SDKs you need
-// import { initializeApp } from "firebase/app";
+import { initializeApp } from "firebase/app";
 // import { getAnalytics } from "firebase/analytics";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 // // TODO: Add SDKs for Firebase products that you want to use
 // // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -16,6 +17,18 @@
 //   measurementId: "G-7M6DTB5M28"
 // };
 
-// // Initialize Firebase
-// const app = initializeApp(firebaseConfig);
+const loginConfig = {
+  apiKey: "AIzaSyBNfzNOwn5v4OyUNgAP-_LFTEU6xG_H_1c",
+  authDomain: "phr-db.firebaseapp.com",
+  projectId: "phr-db",
+  storageBucket: "phr-db.appspot.com",
+  messagingSenderId: "90909279544",
+  appId: "1:90909279544:web:1f93c480db0dafbec7edcd",
+  measurementId: "G-WTNLDGKSM3",
+};
+// Initialize Firebase
+const app = initializeApp(loginConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+export { auth, provider };
 // const analytics = getAnalytics(app);
