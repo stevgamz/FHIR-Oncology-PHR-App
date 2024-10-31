@@ -7,11 +7,22 @@ import {
   deletePatient,
 } from "./FhirService";
 import "./index.css";
+import CryptoJS from "crypto-js";
 
-// Define types for patient data
 interface Patient {
+  telecom: Array<{
+    system: string;
+    value: string;
+  }>;
   resourceType: string;
-  id: string;
+  id?: string;
+  meta?: {
+    profile: Array<string>;
+  };
+  text?: {
+    status: string;
+    div: string;
+  };
   identifier?: Array<{
     use: string;
     type: {
@@ -24,55 +35,36 @@ interface Patient {
     system: string;
     value: string;
   }>;
-  meta?: {
-    profile: string[];
-  };
+  active?: boolean;
   name: Array<{
     use: string;
-    given: string[];
     family: string;
+    given: Array<string>;
   }>;
-  gender: string;
-  birthDate: string;
-  telecom?: Array<{
-    system: string;
-    value: string;
-    use?: string;
-  }>;
-  managingOrganization?: {
-    reference: string;
-  };
-  contact?: Array<{
-    relationship: Array<{
+  gender?: string;
+  birthDate?: string;
+  communication?: Array<{
+    language: {
       coding: Array<{
         system: string;
         code: string;
         display: string;
       }>;
-    }>;
-    name: {
-      use: string;
-      family: string;
-      given: string[];
     };
-    telecom: Array<{
-      system: string;
-      value: string;
-      use?: string;
-    }>;
   }>;
+  managingOrganization?: {
+    reference: string;
+  };
   address?: Array<{
-    use: string;
-    line: string[];
+    use?: string;
+    type?: string;
+    text?: string;
+    line: Array<string>;
     city: string;
     state: string;
     postalCode: string;
     country: string;
   }>;
-  text?: {
-    status: string;
-    div: string;
-  };
 }
 
 interface PatientErrors {
@@ -108,8 +100,8 @@ const PatientForm: React.FC = () => {
   const [postalCode, setPostalCode] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [managingOrganization, setManagingOrganization] = useState<string>("");
-  const [patientGuardianName, setPatientGuardianName] = useState<string>("");
-  const [patientGuardianPhone, setPatientGuardianPhone] = useState<string>("");
+  // const [patientGuardianName, setPatientGuardianName] = useState<string>("");
+  // const [patientGuardianPhone, setPatientGuardianPhone] = useState<string>("");
   const [errors, setErrors] = useState<PatientErrors>({});
 
   useEffect(() => {
@@ -129,21 +121,64 @@ const PatientForm: React.FC = () => {
       setState(patient?.address?.[0]?.state || "");
       setPostalCode(patient?.address?.[0]?.postalCode || "");
       setCountry(patient?.address?.[0]?.country || "");
-      setPatientGuardianName(patient?.contact?.[0]?.name?.given?.[0] || "");
-      setPatientGuardianPhone(
-        patient?.contact?.[0]?.telecom?.find((t) => t.system === "phone")
-          ?.value || ""
-      );
+      setManagingOrganization(patient?.managingOrganization?.reference || "");
+      // setPatientGuardianName(patient?.contact?.[0]?.name?.given?.[0] || "");
+      // setPatientGuardianPhone(
+      //   patient?.contact?.[0]?.telecom?.find((t) => t.system === "phone")
+      //     ?.value || ""
+      // );
     }
   }, [patient]);
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
-    const generatedId = Math.floor(Math.random() * 1000);
+
+    setErrors({});
+
+    const newErrors: PatientErrors = {};
+    if (!name) newErrors.name = "First name is required";
+    if (!family) newErrors.family = "Last name is required";
+    if (!gender) newErrors.gender = "Gender is required";
+    if (!birthDate) newErrors.birthDate = "Birth date is required";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    let generatedId = "";
+    if (country === "Indonesia") {
+      generatedId =
+        "ID" +
+        Math.random().toString(36).substr(2, 3) +
+        Math.floor(1000 + Math.random() * 9000);
+    } else if (country === "America") {
+      generatedId =
+        "US" +
+        Math.random().toString(36).substr(2, 3) +
+        Math.floor(1000 + Math.random() * 9000);
+    } else if (country === "Taiwan") {
+      generatedId =
+        "TW" +
+        Math.random().toString(36).substr(2, 3) +
+        Math.floor(1000 + Math.random() * 9000);
+    }
 
     const newPatient: Patient = {
       resourceType: "Patient",
       id: `${generatedId}`,
+      // id: "aaa",
+      meta: {
+        profile: [
+          // "https://twcore.mohw.gov.tw/ig/pas/StructureDefinition/Patient-twpas",
+          // "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC1-PatientCore",
+          "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
+        ],
+      },
+      text: {
+        status: "generated",
+        div: '<div xmlns="http://www.w3.org/1999/xhtml">Kiki Fer, a male born on 2024-09-05</div>',
+      },
       identifier: [
         {
           use: "official",
@@ -160,65 +195,51 @@ const PatientForm: React.FC = () => {
           value: "12345",
         },
       ],
-      meta: {
-        profile: [
-          "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC1-PatientCore",
-          "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
-          "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC3-PatientContact",
-        ],
-      },
-      name: [{ use: "official", given: [name], family }],
-      gender,
-      birthDate,
-      managingOrganization: { reference: "Organization/ktgh" },
-      contact: [
+      active: true,
+      name: [
         {
-          relationship: [
-            {
-              coding: [
-                {
-                  system: "http://terminology.hl7.org/CodeSystem/v2-0131",
-                  code: "N",
-                  display: "Next of kin",
-                },
-              ],
-            },
-          ],
-          name: {
-            use: "official",
-            family,
-            given: [name],
+          use: "official",
+          family: family,
+          given: [name],
+        },
+      ],
+      gender: gender,
+      birthDate: birthDate,
+      communication: [
+        {
+          language: {
+            coding: [
+              {
+                system: "urn:ietf:bcp:47",
+                code: "zh-TW",
+                display: "Chinese (Taiwan)",
+              },
+            ],
           },
-          telecom: [
-            {
-              system: "phone",
-              value: patientGuardianPhone,
-              use: "mobile",
-            },
-          ],
         },
       ],
-      address: [
-        {
-          use: "home",
-          line: [addressLine],
-          city,
-          state,
-          postalCode,
-          country,
-        },
-      ],
-      text: {
-        status: "generated",
-        div: `<div xmlns="http://www.w3.org/1999/xhtml">${name} ${family}, a ${gender} born on ${birthDate}</div>`,
+      managingOrganization: {
+        reference: "Organization/org-hosp-example",
       },
+      telecom: [
+        {
+          system: "phone",
+          value: phone,
+        },
+        {
+          system: "email",
+          value: email,
+        },
+      ],
     };
 
     try {
-      const savedPatient = await createPatient(newPatient);
-      setPatient(savedPatient);
+      const savedPatient = await createPatient(newPatient, false);
+      const encryptedPatient = await createPatient(newPatient, true);
+
+      setPatient(encryptedPatient);
       setJsonResult(savedPatient);
-      navigate("/observation", { state: { patientData: savedPatient } });
+      // navigate("/observation", { state: { patientData: savedPatient } });
     } catch (error) {
       console.error("Error saving patient:", error);
     }
@@ -459,7 +480,7 @@ const PatientForm: React.FC = () => {
             {errors.managingOrganization && <span className="text-red-500 text-sm">{errors.managingOrganization}</span>}
           </div> */}
 
-          <div className="mb-4">
+          {/* <div className="mb-4">
             <label className="block text-gray-700 font-semibold mb-2">
               Patient Guardian Name:
             </label>
@@ -499,7 +520,7 @@ const PatientForm: React.FC = () => {
                 {errors.patientGuardianPhone}
               </span>
             )}
-          </div>
+          </div> */}
 
           <button
             type="submit"
