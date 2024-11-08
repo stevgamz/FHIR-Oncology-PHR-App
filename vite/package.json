@@ -11,8 +11,12 @@
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
+    "firebase": "^11.0.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-google-button": "^0.8.0",
+    "react-router-dom": "^6.27.0",
+    "react-toastify": "^10.0.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.11.1",

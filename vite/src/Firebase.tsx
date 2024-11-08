@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase/app";
 // import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 // // TODO: Add SDKs for Firebase products that you want to use
 // // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -17,18 +18,19 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 //   measurementId: "G-7M6DTB5M28"
 // };
 
-const loginConfig = {
-  apiKey: "AIzaSyBNfzNOwn5v4OyUNgAP-_LFTEU6xG_H_1c",
-  authDomain: "phr-db.firebaseapp.com",
-  projectId: "phr-db",
-  storageBucket: "phr-db.appspot.com",
-  messagingSenderId: "90909279544",
-  appId: "1:90909279544:web:1f93c480db0dafbec7edcd",
-  measurementId: "G-WTNLDGKSM3",
+const firebaseConfig = {
+  apiKey: "AIzaSyBpJvjDeO6Sd0_nVsro4HVYJyYU21Emi1o",
+  authDomain: "phr-db-1.firebaseapp.com",
+  projectId: "phr-db-1",
+  storageBucket: "phr-db-1.appspot.com",
+  messagingSenderId: "674228357055",
+  appId: "1:674228357055:web:9abe9c9616db524ae8830a",
+  measurementId: "G-WGKJHNY2GY",
 };
 // Initialize Firebase
-const app = initializeApp(loginConfig);
+const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
-export { auth, provider };
+const db = getFirestore(app);
+export { auth, provider, db };
 // const analytics = getAnalytics(app);

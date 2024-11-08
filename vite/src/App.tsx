@@ -4,7 +4,8 @@ import PatientForm from "./PatientForm";
 import ObservationForm from "./ObservationForm";
 import ConditionForm from "./ConditionForm";
 import "./index.css";
-import SignIn from "./SignIn";
+import SignIn from "./Authentication/SignIn";
+import Profile from "./Profile";
 
 const App: React.FC = () => {
   return (
@@ -12,6 +13,7 @@ const App: React.FC = () => {
       <div className="App">
         <Routes>
           <Route path="/" element={<SignIn />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/observation" element={<ObservationForm />} />
           <Route path="/patient" element={<PatientForm />} />
           <Route path="/condition" element={<ConditionForm />} />
