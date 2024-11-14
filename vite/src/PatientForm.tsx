@@ -7,7 +7,7 @@ import {
   deletePatient,
 } from "./FhirService";
 import "./index.css";
-import CryptoJS from "crypto-js";
+// import CryptoJS from "crypto-js";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./Firebase";
 import { doc, DocumentData, getDoc, setDoc } from "firebase/firestore";
@@ -86,8 +86,17 @@ interface PatientErrors {
   patientGuardianPhone?: string;
 }
 
+interface PatientDataProps {
+  id: string;
+  name: string;
+  family: string;
+  gender: string;
+  birthDate: string;
+  email?: string;
+  phone?: string;
+}
+
 const PatientForm: React.FC = () => {
-  //set name, family, email in the form after login
   const userData = async () => {
     onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -142,9 +151,11 @@ const PatientForm: React.FC = () => {
   const [postalCode, setPostalCode] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [managingOrganization, setManagingOrganization] = useState<string>("");
-  // const [patientGuardianName, setPatientGuardianName] = useState<string>("");
-  // const [patientGuardianPhone, setPatientGuardianPhone] = useState<string>("");
   const [errors, setErrors] = useState<PatientErrors>({});
+  const [revealToken, setRevealToken] = useState("");
+  const [generatedToken, setGeneratedToken] = useState("");
+
+  // Fungsi untuk menghasilkan token acak
 
   useEffect(() => {
     if (patient) {
@@ -158,20 +169,26 @@ const PatientForm: React.FC = () => {
       setEmail(
         patient?.telecom?.find((t) => t.system === "email")?.value || ""
       );
-      setAddressLine(patient?.address?.[0]?.line?.[0] || "");
-      setCity(patient?.address?.[0]?.city || "");
-      setState(patient?.address?.[0]?.state || "");
-      setPostalCode(patient?.address?.[0]?.postalCode || "");
-      setCountry(patient?.address?.[0]?.country || "");
-      setManagingOrganization(patient?.managingOrganization?.reference || "");
-      // setPatientGuardianName(patient?.contact?.[0]?.name?.given?.[0] || "");
-      // setPatientGuardianPhone(
-      //   patient?.contact?.[0]?.telecom?.find((t) => t.system === "phone")
-      //     ?.value || ""
-      // );
+      // setAddressLine(patient?.address?.[0]?.line?.[0] || "");
+      // setCity(patient?.address?.[0]?.city || "");
+      // setState(patient?.address?.[0]?.state || "");
+      // setPostalCode(patient?.address?.[0]?.postalCode || "");
+      // setCountry(patient?.address?.[0]?.country || "");
+      // setManagingOrganization(patient?.managingOrganization?.reference || "");
     }
     userData();
   }, [patient]);
+
+  const generateRandomToken = (): string => {
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
+  };
+
+  // Token yang digunakan untuk mengungkap data
+  // const secretToken = generateRandomToken(); // Token acak untuk setiap form
+  // console.log(secretToken);
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -238,8 +255,6 @@ const PatientForm: React.FC = () => {
               id: `${phrDoc.data()?.fhirId}`,
               meta: {
                 profile: [
-                  // "https://twcore.mohw.gov.tw/ig/pas/StructureDefinition/Patient-twpas",
-                  // "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC1-PatientCore",
                   "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
                 ],
               },
@@ -305,12 +320,38 @@ const PatientForm: React.FC = () => {
             // const encryptedPatient = await updatePatient(newPatient, true);
             // setPatient(encryptedPatient);
             // setJsonResult(updatedPatient);
+            const newToken = generateRandomToken();
+            setGeneratedToken(newToken);
+            console.log("Generated Token:", newToken);
 
-            //sementara
             const savedPatient = await createPatient(newPatient, false);
+
             const encryptedPatient = await createPatient(newPatient, true);
             setPatient(encryptedPatient);
-            setJsonResult(savedPatient);
+            // setJsonResult(savedPatient);
+            setJsonResult(encryptedPatient);
+            // navigate("/observation", { state: { patientData: savedPatient } });
+            const patientDataToPass: PatientDataProps = {
+              id: savedPatient.id,
+              name: savedPatient.name?.[0]?.given?.[0] || "",
+              family: savedPatient.name?.[0]?.family || "",
+              gender: savedPatient.gender || "",
+              birthDate: savedPatient.birthDate || "",
+              email: savedPatient.telecom?.find(
+                (t: { system: string }) => t.system === "email"
+              )?.value,
+              phone: savedPatient.telecom?.find(
+                (t: { system: string }) => t.system === "phone"
+              )?.value,
+            };
+
+            // make a const to generate token if we have the token, we can unhash or decrypt the data
+
+            // navigate("/observation", {
+            //   state: {
+            //     patientData: patientDataToPass,
+            //   },
+            // });
           } else {
             // create PHR & patient document with fhirId
             await setDoc(phrDocRef, {
@@ -404,11 +445,87 @@ const PatientForm: React.FC = () => {
             const savedPatient = await createPatient(newPatient, false);
             const encryptedPatient = await createPatient(newPatient, true);
             setPatient(encryptedPatient);
-            setJsonResult(savedPatient);
+            setJsonResult(encryptedPatient);
+
+            const patientDataToPass: PatientDataProps = {
+              id: savedPatient.id,
+              name: savedPatient.name?.[0]?.given?.[0] || "",
+              family: savedPatient.name?.[0]?.family || "",
+              gender: savedPatient.gender || "",
+              birthDate: savedPatient.birthDate || "",
+              email: savedPatient.telecom?.find(
+                (t: { system: string }) => t.system === "email"
+              )?.value,
+              phone: savedPatient.telecom?.find(
+                (t: { system: string }) => t.system === "phone"
+              )?.value,
+            };
+
+            // navigate("/observation", {
+            //   state: {
+            //     patientData: patientDataToPass,
+            //   },
+            // });
+
+            // navigate("/observation", { state: { patientData: savedPatient } });
           }
         }
       }
     });
+  };
+
+  const handleReveal = async () => {
+    if (revealToken === generatedToken) {
+      const revealedData = {
+        ...patient,
+        resourceType: patient?.resourceType || "Patient",
+        name: (patient?.name ?? []).map((n) => ({
+          ...n,
+          family: n.family,
+          given: n.given.map((g) => g),
+        })),
+        birthDate: patient?.birthDate,
+        telecom: (patient?.telecom ?? []).map((t) => ({
+          ...t,
+          value: t.value,
+        })),
+      };
+      // alert(
+      //   `Token valid! Data revealed:\n${JSON.stringify(
+      //     {
+      //       name: revealedData.name,
+      //       birthDate: revealedData.birthDate,
+      //       telecom: revealedData.telecom,
+      //     },
+      //     null,
+      //     2
+      //   )}`
+      // );
+      try {
+        const savedPatient = await createPatient(revealedData, true);
+        alert(
+          // `Token valid! Data revealed:\n${JSON.stringify(
+          //   savedPatient,
+          //   null,
+          //   2
+          // )}`
+          `Token valid! Data revealed:\n${JSON.stringify(
+            {
+              name: savedPatient.name,
+              birthDate: savedPatient.birthDate,
+              telecom: savedPatient.telecom,
+            },
+            null,
+            2
+          )}`
+        );
+        setJsonResult(savedPatient);
+      } catch (error) {
+        alert("Error revealing patient data.");
+      }
+    } else {
+      alert("Invalid token. Data not revealed.");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -635,59 +752,6 @@ const PatientForm: React.FC = () => {
             )}
           </div>
 
-          {/* <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">Managing Organization:</label>
-            <input
-              type="text"
-              value={managingOrganization}
-              onChange={(e) => setManagingOrganization(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${errors.managingOrganization ? 'border-red-500' : 'focus:ring-2 focus:ring-green-500'}`}
-            />
-            {errors.managingOrganization && <span className="text-red-500 text-sm">{errors.managingOrganization}</span>}
-          </div> */}
-
-          {/* <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Patient Guardian Name:
-            </label>
-            <input
-              type="text"
-              value={patientGuardianName}
-              onChange={(e) => setPatientGuardianName(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.patientGuardianName
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.patientGuardianName && (
-              <span className="text-red-500 text-sm">
-                {errors.patientGuardianName}
-              </span>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Patient Guardian Phone:
-            </label>
-            <input
-              type="tel"
-              value={patientGuardianPhone}
-              onChange={(e) => setPatientGuardianPhone(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.patientGuardianPhone
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.patientGuardianPhone && (
-              <span className="text-red-500 text-sm">
-                {errors.patientGuardianPhone}
-              </span>
-            )}
-          </div> */}
-
           <button
             type="submit"
             className="w-full bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -696,17 +760,24 @@ const PatientForm: React.FC = () => {
           </button>
         </form>
 
-        {/* Load Patient Button */}
-        {/* <div className="mt-4 flex justify-center">
+        <div className="mt-6">
+          <label className="block text-gray-700 font-semibold mb-2">
+            Reveal Token:
+          </label>
+          <input
+            type="text"
+            value={revealToken}
+            onChange={(e) => setRevealToken(e.target.value)}
+            className="w-full px-4 py-2 border rounded-md focus:outline-none"
+          />
           <button
-            onClick={() => handleLoad('patient-id')}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onClick={handleReveal}
+            className="mt-2 bg-green-500 text-white font-bold px-4 py-2 rounded-md hover:bg-green-600 focus:outline-none"
           >
-            Load Patient
+            Reveal Data
           </button>
-        </div> */}
+        </div>
 
-        {/* JSON Result Display */}
         <div className="bg-gray-100 p-6 rounded-lg shadow-inner w-full max-w-lg mt-4">
           <h2 className="text-xl font-bold text-gray-800 mb-4">
             Resulting JSON:

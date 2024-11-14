@@ -281,6 +281,7 @@ interface Patient {
   managingOrganization?: {
     reference: string;
   };
+  token?: string;
   // address?: Array<{
   //   use?: string;
   //   type?: string;
@@ -295,22 +296,13 @@ interface Patient {
 
 interface Observation {
   id?: string;
+  // code: string;
+  // value: string;
 }
 
 interface Condition {
   id?: string;
 }
-
-// export const createPatient = async (patient: Patient): Promise<any> => {
-//   const response = await fetch(`${baseUrl}/Patient/${patient.id}`, {
-//     method: "PUT",
-//     headers: {
-//       "Content-Type": "application/fhir+json",
-//     },
-//     body: JSON.stringify(patient),
-//   });
-//   return response.json();
-// };
 
 export const createPatient = async (
   patient: Patient,
@@ -353,7 +345,6 @@ export const readPatient = async (id: string): Promise<any> => {
 };
 
 export const updatePatient = async (patient: Patient): Promise<any> => {
-  // First, get the ETag of the current resource
   const getResponse = await fetch(`${baseUrl}/Patient/${patient.id}`, {
     method: "GET",
     headers: {
@@ -367,7 +358,7 @@ export const updatePatient = async (patient: Patient): Promise<any> => {
     method: "PUT",
     headers: {
       "Content-Type": "application/fhir+json",
-      "If-Match": eTag || "", // Use ETag for optimistic concurrency control
+      "If-Match": eTag || "",
     },
     body: JSON.stringify(patient),
   });
@@ -384,8 +375,8 @@ export const deletePatient = async (id: string): Promise<Response> => {
 export const createObservation = async (
   observation: Observation
 ): Promise<any> => {
-  const response = await fetch(`${baseUrl}/Observation`, {
-    method: "POST",
+  const response = await fetch(`${baseUrl}/Observation/${observation.id}`, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/fhir+json",
     },
