@@ -1,6 +1,8 @@
 // // Import the functions you need from the SDKs you need
-// import { initializeApp } from "firebase/app";
+import { initializeApp } from "firebase/app";
 // import { getAnalytics } from "firebase/analytics";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 // // TODO: Add SDKs for Firebase products that you want to use
 // // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -16,6 +18,19 @@
 //   measurementId: "G-7M6DTB5M28"
 // };
 
-// // Initialize Firebase
-// const app = initializeApp(firebaseConfig);
+const firebaseConfig = {
+  apiKey: "AIzaSyBpJvjDeO6Sd0_nVsro4HVYJyYU21Emi1o",
+  authDomain: "phr-db-1.firebaseapp.com",
+  projectId: "phr-db-1",
+  storageBucket: "phr-db-1.appspot.com",
+  messagingSenderId: "674228357055",
+  appId: "1:674228357055:web:9abe9c9616db524ae8830a",
+  measurementId: "G-WGKJHNY2GY",
+};
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+const db = getFirestore(app);
+export { auth, provider, db };
 // const analytics = getAnalytics(app);
