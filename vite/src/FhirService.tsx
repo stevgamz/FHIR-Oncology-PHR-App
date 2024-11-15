@@ -235,6 +235,14 @@
 const baseUrl = "https://hapi.fhir.tw/fhir";
 import CryptoJS from "crypto-js";
 
+interface HashMapping {
+  names: {
+    family: { [hash: string]: string };
+    given: { [hash: string]: string };
+  };
+  telecom: { [hash: string]: string };
+}
+
 interface Patient {
   telecom: Array<{
     system: string;
@@ -307,7 +315,37 @@ interface Condition {
 export const createPatient = async (
   patient: Patient,
   hashSensitiveFields = true
-): Promise<any> => {
+): Promise<{ patient: any; hashMapping?: HashMapping }> => {
+  let hashMapping: HashMapping | undefined;
+
+  if (hashSensitiveFields) {
+    // Buat hash mapping sebelum mengenkripsi data
+    hashMapping = {
+      names: {
+        family: {},
+        given: {},
+      },
+      telecom: {},
+    };
+
+    // Simpan mapping untuk nama keluarga dan nama depan
+    patient.name.forEach((n) => {
+      const familyHash = CryptoJS.SHA256(n.family).toString();
+      hashMapping!.names.family[familyHash] = n.family;
+
+      n.given.forEach((g) => {
+        const givenHash = CryptoJS.SHA256(g).toString();
+        hashMapping!.names.given[givenHash] = g;
+      });
+    });
+
+    // Simpan mapping untuk telecom
+    patient.telecom.forEach((t) => {
+      const valueHash = CryptoJS.SHA256(t.value).toString();
+      hashMapping!.telecom[valueHash] = t.value;
+    });
+  }
+
   const dataToSend = hashSensitiveFields
     ? {
         ...patient,
@@ -331,18 +369,156 @@ export const createPatient = async (
     body: JSON.stringify(dataToSend),
   });
 
-  return response.json();
+  const savedPatient = await response.json();
+
+  // Return both the saved patient and the hash mapping
+  return {
+    patient: savedPatient,
+    hashMapping: hashMapping,
+  };
 };
 
-export const readPatient = async (id: string): Promise<any> => {
-  const response = await fetch(`${baseUrl}/Patient/${id}`, {
+// export const createPatient = async (
+//   patient: Patient,
+//   hashSensitiveFields = true
+// ): Promise<any> => {
+//   const dataToSend = hashSensitiveFields
+//     ? {
+//         ...patient,
+//         name: patient.name.map((n) => ({
+//           ...n,
+//           family: CryptoJS.SHA256(n.family).toString(),
+//           given: n.given.map((g) => CryptoJS.SHA256(g).toString()),
+//         })),
+//         telecom: patient.telecom.map((t) => ({
+//           ...t,
+//           value: CryptoJS.SHA256(t.value).toString(),
+//         })),
+//       }
+//     : patient;
+
+//   const response = await fetch(`${baseUrl}/Patient/${patient.id}`, {
+//     method: "PUT",
+//     headers: {
+//       "Content-Type": "application/fhir+json",
+//     },
+//     body: JSON.stringify(dataToSend),
+//   });
+
+//   return response.json();
+// };
+
+export const readPatient = async (
+  patientId: string,
+  hashMapping: HashMapping
+): Promise<any> => {
+  const response = await fetch(`${baseUrl}/Patient/${patientId}`, {
     method: "GET",
-    // headers: {
-    //   "Content-Type": "application/fhir+json",
-    // },
+    headers: {
+      "Content-Type": "application/fhir+json",
+    },
   });
-  return response.json();
+
+  const hashedPatient = await response.json();
+
+  // Jika tidak ada mapping hash, kembalikan data yang masih terhash
+  if (!hashMapping) {
+    return hashedPatient;
+  }
+
+  // Unhash field yang sensitif menggunakan mapping
+  const unhashedPatient = {
+    ...hashedPatient,
+    name: hashedPatient.name.map((n: any) => ({
+      ...n,
+      family: hashMapping.names.family[n.family] || n.family,
+      given: n.given.map((g: string) => hashMapping.names.given[g] || g),
+    })),
+    telecom: hashedPatient.telecom.map((t: any) => ({
+      ...t,
+      value: hashMapping.telecom[t.value] || t.value,
+    })),
+  };
+
+  return unhashedPatient;
 };
+
+// Helper function untuk membuat hash mapping
+export const createHashMapping = (patient: Patient): HashMapping => {
+  const mapping: HashMapping = {
+    names: {
+      family: {},
+      given: {},
+    },
+    telecom: {},
+  };
+
+  // Mapping untuk nama keluarga
+  patient.name.forEach((n) => {
+    const hashedFamily = CryptoJS.SHA256(n.family).toString();
+    mapping.names.family[hashedFamily] = n.family;
+
+    // Mapping untuk nama depan
+    n.given.forEach((g) => {
+      const hashedGiven = CryptoJS.SHA256(g).toString();
+      mapping.names.given[hashedGiven] = g;
+    });
+  });
+
+  // Mapping untuk telecom
+  patient.telecom.forEach((t) => {
+    const hashedValue = CryptoJS.SHA256(t.value).toString();
+    mapping.telecom[hashedValue] = t.value;
+  });
+
+  return mapping;
+};
+
+// const unhashSensitiveFields = (patient: Patient): Patient => {
+//   return {
+//     ...patient,
+//     name: patient.name
+//       ? patient.name.map((n) => ({
+//           ...n,
+//           family: n.family ? CryptoJS.SHA256(n.family).toString() : "",
+//           given: n.given
+//             ? n.given.map((g) => CryptoJS.SHA256(g).toString())
+//             : [],
+//         }))
+//       : [],
+//     telecom: patient.telecom
+//       ? patient.telecom.map((t) => ({
+//           ...t,
+//           value: t.value ? CryptoJS.SHA256(t.value).toString() : "",
+//         }))
+//       : [],
+//   };
+// };
+
+// export const readPatient = async (id: string): Promise<any> => {
+//   try {
+//     const response = await fetch(`${baseUrl}/Patient/${id}`, {
+//       method: "GET",
+//       headers: {
+//         "Content-Type": "application/fhir+json",
+//       },
+//     });
+
+//     // Log response status dan body untuk debugging
+//     console.log("Response status:", response.status);
+//     if (!response.ok) {
+//       console.error(`Error: ${response.status} ${response.statusText}`);
+//       return null; // Mengembalikan null jika respons gagal
+//     }
+
+//     const patient = await response.json();
+//     console.log("Fetched patient data:", patient); // Log data pasien untuk verifikasi
+//     return unhashSensitiveFields(patient);
+//   } catch (error) {
+//     console.error("Failed to fetch patient data:", error);
+//     return null;
+//   }
+// };
 
 export const updatePatient = async (patient: Patient): Promise<any> => {
   const getResponse = await fetch(`${baseUrl}/Patient/${patient.id}`, {
