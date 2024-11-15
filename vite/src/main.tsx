@@ -4,9 +4,10 @@ import App from "./App.tsx";
 import "./index.css";
 import Index from "./index.tsx";
 import Login from "./Login.tsx";
+import Profile from "./Profile.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Login />
+    <Profile />
   </StrictMode>
 );
