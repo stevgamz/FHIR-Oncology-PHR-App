@@ -19,13 +19,13 @@ import { getFirestore } from "firebase/firestore";
 // };
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBpJvjDeO6Sd0_nVsro4HVYJyYU21Emi1o",
-  authDomain: "phr-db-1.firebaseapp.com",
-  projectId: "phr-db-1",
-  storageBucket: "phr-db-1.appspot.com",
-  messagingSenderId: "674228357055",
-  appId: "1:674228357055:web:9abe9c9616db524ae8830a",
-  measurementId: "G-WGKJHNY2GY",
+  apiKey: import.meta.env.VITE_API_KEY,
+  authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_APP_ID,
+  measurementId: import.meta.env.VITE_MEASUREMENT_ID,
 };
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

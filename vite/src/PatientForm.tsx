@@ -127,7 +127,7 @@ const PatientForm: React.FC = () => {
             const userData = userDoc.data();
             const googlePatient = {
               resourceType: "Patient",
-              email: userData?.telecom?.[1]?.value,
+              email: userData?.telecom?.[1]?.value || userData?.email,
               name: {
                 use: "official",
                 family: userData?.name?.[0]?.family,
@@ -291,7 +291,7 @@ const PatientForm: React.FC = () => {
               ],
             });
 
-            const newPatient: Patient = {
+            const updatePatient: Patient = {
               resourceType: "Patient",
               id: `${phrDoc.data()?.fhirId}`,
               meta: {
@@ -526,6 +526,7 @@ const PatientForm: React.FC = () => {
           }
         }
       }
+      window.location.href = "/profile";
     });
   };
 

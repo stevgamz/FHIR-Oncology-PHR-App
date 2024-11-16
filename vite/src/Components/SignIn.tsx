@@ -45,8 +45,8 @@ const SignIn = () => {
         // create PHR path for user
         const phrDocRef = doc(db, "PHR", user.uid);
         const phrDoc = await getDoc(phrDocRef);
-        const phrId = `PHR-${
-          Math.random().toString(36).substr(2, 3) +
+        const phrId = `${
+          Math.random().toString(36).substr(2, 5) +
           Math.floor(1000 + Math.random() * 9000)
         }`;
         const userDocRef = doc(db, "Users", phrId);

@@ -38,6 +38,7 @@ const Profile = () => {
             ],
           };
           console.log(googlePatient, "Patient");
+
           setUserDetails(userDoc.data());
         } else {
           console.error("User does not exist in the database");
@@ -75,15 +76,15 @@ const Profile = () => {
     >
       {userDetails ? (
         <>
-          <h2>Welcome, {userDetails.given}</h2>
+          <h1>Welcome, {userDetails.name[0].given[0]}</h1>
           <div>
-            <p>Email: {userDetails.email}</p>
-            <p>Name: {userDetails.name}</p>
-            <p>Given: {userDetails.given}</p>
-            <p>Family: {userDetails.family}</p>
-            <p>Gender: {userDetails.gender}</p>
-            <p>Birthdate: {userDetails.birthDate}</p>
-            <p>Phone: {userDetails.phone}</p>
+            <h3>First name: {userDetails.name[0].given}</h3>
+            <h3>Family name: {userDetails.name[0].family}</h3>
+            <h3>Gender: {userDetails.gender}</h3>
+            <h3>Birth Date: {userDetails.birthDate}</h3>
+            <h3>Email: {userDetails.telecom[1].value}</h3>
+            <h3>Phone: {userDetails.telecom[0].value}</h3>
+            <h3></h3>
           </div>
           <button onClick={handleSignOut}>Sign Out</button>
         </>
