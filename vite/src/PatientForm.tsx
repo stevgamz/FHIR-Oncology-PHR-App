@@ -7,10 +7,11 @@ import {
   deletePatient,
 } from "./FhirService";
 import "./index.css";
-import CryptoJS from "crypto-js";
+// import CryptoJS from "crypto-js";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./Firebase";
 import { doc, DocumentData, getDoc, setDoc } from "firebase/firestore";
+import CryptoJS from "crypto-js";
 
 interface Patient {
   telecom: Array<{
@@ -110,8 +111,21 @@ interface PatientDataProps {
   }>;
 }
 
+interface HashMapping {
+  names: {
+    family: { [hash: string]: string };
+    given: { [hash: string]: string };
+  };
+  telecom: { [hash: string]: string };
+}
+
+interface PatientToken {
+  token: string;
+  patientId: string;
+  createdAt: Date;
+}
+
 const PatientForm: React.FC = () => {
-  //set name, family, email in the form after login
   const userData = async () => {
     onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -166,9 +180,50 @@ const PatientForm: React.FC = () => {
   const [postalCode, setPostalCode] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [managingOrganization, setManagingOrganization] = useState<string>("");
-  // const [patientGuardianName, setPatientGuardianName] = useState<string>("");
-  // const [patientGuardianPhone, setPatientGuardianPhone] = useState<string>("");
   const [errors, setErrors] = useState<PatientErrors>({});
+  const [hashMapping, setHashMapping] = useState<HashMapping>({
+    names: {
+      family: {},
+      given: {},
+    },
+    telecom: {},
+  });
+
+  const [patientToken, setPatientToken] = useState<string>("");
+  const [inputToken, setInputToken] = useState<string>("");
+  const [isTokenValid, setIsTokenValid] = useState<boolean>(false);
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
+
+  const generateRandomToken = (): string => {
+    const tokenLength = 8;
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let token = "";
+
+    for (let i = 0; i < tokenLength; i++) {
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      token += characters[randomIndex];
+    }
+
+    return token;
+  };
+
+  const saveTokenToDatabase = async (
+    userId: string,
+    patientId: string,
+    token: string
+  ) => {
+    try {
+      const tokenData: PatientToken = {
+        token: token,
+        patientId: patientId,
+        createdAt: new Date(),
+      };
+      await setDoc(doc(db, "PatientTokens", patientId), tokenData);
+    } catch (error) {
+      console.error("Error saving token:", error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     if (patient) {
@@ -182,17 +237,12 @@ const PatientForm: React.FC = () => {
       setEmail(
         patient?.telecom?.find((t) => t.system === "email")?.value || ""
       );
-      setAddressLine(patient?.address?.[0]?.line?.[0] || "");
-      setCity(patient?.address?.[0]?.city || "");
-      setState(patient?.address?.[0]?.state || "");
-      setPostalCode(patient?.address?.[0]?.postalCode || "");
-      setCountry(patient?.address?.[0]?.country || "");
-      setManagingOrganization(patient?.managingOrganization?.reference || "");
-      // setPatientGuardianName(patient?.contact?.[0]?.name?.given?.[0] || "");
-      // setPatientGuardianPhone(
-      //   patient?.contact?.[0]?.telecom?.find((t) => t.system === "phone")
-      //     ?.value || ""
-      // );
+      // setAddressLine(patient?.address?.[0]?.line?.[0] || "");
+      // setCity(patient?.address?.[0]?.city || "");
+      // setState(patient?.address?.[0]?.state || "");
+      // setPostalCode(patient?.address?.[0]?.postalCode || "");
+      // setCountry(patient?.address?.[0]?.country || "");
+      // setManagingOrganization(patient?.managingOrganization?.reference || "");
     }
     userData();
   }, [patient]);
@@ -242,9 +292,7 @@ const PatientForm: React.FC = () => {
           console.log("PHR ID not found");
           return;
         } else {
-          // check if user already has a Patient document
           if (phrDoc.data()?.fhirId) {
-            // update Patient document without fhirId
             await setDoc(userDocRef, {
               resourceType: "Patient",
               fhirId: phrDoc.data()?.fhirId,
@@ -262,8 +310,6 @@ const PatientForm: React.FC = () => {
               id: `${phrDoc.data()?.fhirId}`,
               meta: {
                 profile: [
-                  // "https://twcore.mohw.gov.tw/ig/pas/StructureDefinition/Patient-twpas",
-                  // "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC1-PatientCore",
                   "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
                 ],
               },
@@ -325,15 +371,41 @@ const PatientForm: React.FC = () => {
                 },
               ],
             };
-            // const updatedPatient = await updatePatient(newPatient, false);
-            // const encryptedPatient = await updatePatient(newPatient, true);
-            // setPatient(encryptedPatient);
-            // setJsonResult(updatedPatient);
+            const newToken = generateRandomToken();
+            setPatientToken(newToken);
+            console.log(newToken);
 
-            //sementara
-            const savedPatient = await createPatient(newPatient, false);
-            const encryptedPatient = await createPatient(newPatient, true);
-            setPatient(encryptedPatient);
+            const { patient: savedPatient, hashMapping } = await createPatient(
+              newPatient,
+              true
+            );
+            await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
+            const newHashMapping = {
+              names: {
+                family: {
+                  [CryptoJS.SHA256(family).toString()]: family,
+                },
+                given: {
+                  [CryptoJS.SHA256(name).toString()]: name,
+                },
+              },
+              telecom: {
+                [CryptoJS.SHA256(phone).toString()]: phone,
+                [CryptoJS.SHA256(email).toString()]: email,
+              },
+            };
+
+            setHashMapping(newHashMapping);
+
+            if (hashMapping) {
+              const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
+              await setDoc(mappingDocRef, {
+                mapping: hashMapping,
+                token: newToken,
+              });
+            }
+
+            setPatient(savedPatient);
             setJsonResult(savedPatient);
             const savedPatientData: PatientDataProps = {
               telecom: [
@@ -362,7 +434,6 @@ const PatientForm: React.FC = () => {
             };
             navigate("/Profile", { state: savedPatientData });
           } else {
-            // create PHR & patient document with fhirId
             await setDoc(phrDocRef, {
               googleId: user.uid,
               phrId: phrId,
@@ -388,14 +459,16 @@ const PatientForm: React.FC = () => {
               id: `${generatedId}`,
               meta: {
                 profile: [
-                  // "https://twcore.mohw.gov.tw/ig/pas/StructureDefinition/Patient-twpas",
-                  // "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC1-PatientCore",
                   "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
                 ],
               },
               text: {
                 status: "generated",
-                div: '<div xmlns="http://www.w3.org/1999/xhtml">Kiki Fer, a male born on 2024-09-05</div>',
+                div: `<div xmlns="http://www.w3.org/1999/xhtml">
+                  Patient: ${name ?? ""} ${family ?? ""}
+                  Gender: ${gender ?? ""}
+                  DOB: ${birthDate ?? ""}
+                </div>`,
               },
               identifier: [
                 {
@@ -451,10 +524,33 @@ const PatientForm: React.FC = () => {
                 },
               ],
             };
-            const savedPatient = await createPatient(newPatient, false);
+
+            const newHashMapping = {
+              names: {
+                family: {
+                  [CryptoJS.SHA256(family).toString()]: family,
+                },
+                given: {
+                  [CryptoJS.SHA256(name).toString()]: name,
+                },
+              },
+              telecom: {
+                [CryptoJS.SHA256(phone).toString()]: phone,
+                [CryptoJS.SHA256(email).toString()]: email,
+              },
+            };
+
+            setHashMapping(newHashMapping);
+
+            if (user) {
+              const mappingDocRef = doc(db, "HashMappings", user.uid);
+              await setDoc(mappingDocRef, newHashMapping);
+            }
+
+            // const savedPatient = await createPatient(newPatient, false);
             const encryptedPatient = await createPatient(newPatient, true);
-            setPatient(encryptedPatient);
-            setJsonResult(savedPatient);
+            setPatient(encryptedPatient.patient);
+            setJsonResult(encryptedPatient.patient);
 
             const savedPatientData: PatientDataProps = {
               name: [
@@ -466,16 +562,100 @@ const PatientForm: React.FC = () => {
               ],
             };
             navigate("/Profile", { state: savedPatientData });
+            // navigate("/observation", {
+            //   state: {
+            //     patientData: patientDataToPass,
+            //   },
+            // });
           }
         }
       }
     });
   };
 
-  const handleDelete = async (id: string) => {
-    await deletePatient(id);
-    setPatient(null);
+  const verifyToken = async (
+    patientId: string,
+    inputToken: string
+  ): Promise<boolean> => {
+    try {
+      const tokenDoc = await getDoc(doc(db, "PatientTokens", patientId));
+      if (tokenDoc.exists()) {
+        const storedToken = tokenDoc.data().token;
+        return storedToken === inputToken;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error verifying token:", error);
+      return false;
+    }
   };
+
+  const handleReveal = async () => {
+    if (!JsonResult?.id) {
+      alert("No patient data to reveal");
+      return;
+    }
+
+    try {
+      if (!isTokenValid) {
+        setShowTokenInput(true);
+        return;
+      }
+      const user = auth.currentUser;
+      if (!user) {
+        console.error("No user logged in");
+        return;
+      }
+
+      const mappingDoc = await getDoc(doc(db, "HashMappings", JsonResult.id));
+      if (!mappingDoc.exists()) {
+        console.error("No hash mapping found");
+        return;
+      }
+
+      const storedMapping = mappingDoc.data().mapping;
+
+      const decryptedPatient = await readPatient(JsonResult.id, storedMapping);
+
+      setPatient(decryptedPatient);
+      setJsonResult(decryptedPatient);
+
+      setName(decryptedPatient.name?.[0]?.given?.[0] || "");
+      setFamily(decryptedPatient.name?.[0]?.family || "");
+      setPhone(
+        decryptedPatient.telecom?.find(
+          (t: { system: string }) => t.system === "phone"
+        )?.value || ""
+      );
+      setEmail(
+        decryptedPatient.telecom?.find(
+          (t: { system: string }) => t.system === "email"
+        )?.value || ""
+      );
+    } catch (error) {
+      console.error("Error revealing patient data:", error);
+      alert("Failed to reveal patient data. Please try again.");
+    }
+  };
+
+  const handleTokenSubmit = async () => {
+    if (!JsonResult?.id) return;
+
+    const isValid = await verifyToken(JsonResult.id, inputToken);
+    if (isValid) {
+      setIsTokenValid(true);
+      setShowTokenInput(false);
+      handleReveal();
+    } else {
+      alert("Invalid token. Please try again.");
+      setInputToken("");
+    }
+  };
+
+  // const handleDelete = async (id: string) => {
+  //   await deletePatient(id);
+  //   setPatient(null);
+  // };
 
   return (
     <div className="bg-gradient-to-r from-green-100 to-blue-100 min-h-screen flex items-center justify-center">
@@ -696,59 +876,6 @@ const PatientForm: React.FC = () => {
             )}
           </div>
 
-          {/* <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">Managing Organization:</label>
-            <input
-              type="text"
-              value={managingOrganization}
-              onChange={(e) => setManagingOrganization(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${errors.managingOrganization ? 'border-red-500' : 'focus:ring-2 focus:ring-green-500'}`}
-            />
-            {errors.managingOrganization && <span className="text-red-500 text-sm">{errors.managingOrganization}</span>}
-          </div> */}
-
-          {/* <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Patient Guardian Name:
-            </label>
-            <input
-              type="text"
-              value={patientGuardianName}
-              onChange={(e) => setPatientGuardianName(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.patientGuardianName
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.patientGuardianName && (
-              <span className="text-red-500 text-sm">
-                {errors.patientGuardianName}
-              </span>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Patient Guardian Phone:
-            </label>
-            <input
-              type="tel"
-              value={patientGuardianPhone}
-              onChange={(e) => setPatientGuardianPhone(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.patientGuardianPhone
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.patientGuardianPhone && (
-              <span className="text-red-500 text-sm">
-                {errors.patientGuardianPhone}
-              </span>
-            )}
-          </div> */}
-
           <button
             type="submit"
             className="w-full bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -757,17 +884,63 @@ const PatientForm: React.FC = () => {
           </button>
         </form>
 
-        {/* Load Patient Button */}
-        {/* <div className="mt-4 flex justify-center">
+        {/* <div className="mt-6">
+          <label className="block text-gray-700 font-semibold mb-2">
+            Reveal Token:
+          </label>
           <button
-            onClick={() => handleLoad('patient-id')}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onClick={handleReveal}
+            className="mt-2 bg-green-500 text-white font-bold px-4 py-2 rounded-md hover:bg-green-600 focus:outline-none"
           >
-            Load Patient
+            Reveal Data
           </button>
         </div> */}
 
-        {/* JSON Result Display */}
+        {JsonResult && (
+          <div className="mt-4">
+            <button
+              onClick={handleReveal}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Reveal Original Data
+            </button>
+
+            {/* Token Input Modal/Dialog */}
+            {showTokenInput && (
+              <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
+                <div className="bg-white p-6 rounded-lg shadow-lg">
+                  <h3 className="text-lg font-semibold mb-4">
+                    Enter Reveal Token
+                  </h3>
+                  <input
+                    type="text"
+                    value={inputToken}
+                    onChange={(e) =>
+                      setInputToken(e.target.value.toUpperCase())
+                    }
+                    placeholder="Enter token"
+                    className="border p-2 mb-4 w-full"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setShowTokenInput(false)}
+                      className="bg-gray-500 text-white px-4 py-2 rounded"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleTokenSubmit}
+                      className="bg-blue-500 text-white px-4 py-2 rounded"
+                    >
+                      Submit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="bg-gray-100 p-6 rounded-lg shadow-inner w-full max-w-lg mt-4">
           <h2 className="text-xl font-bold text-gray-800 mb-4">
             Resulting JSON:
