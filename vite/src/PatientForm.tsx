@@ -127,7 +127,7 @@ const PatientForm: React.FC = () => {
             const userData = userDoc.data();
             const googlePatient = {
               resourceType: "Patient",
-              email: userData?.telecom?.[1]?.value,
+              email: userData?.telecom?.[1]?.value || userData?.email,
               name: {
                 use: "official",
                 family: userData?.name?.[0]?.family,
@@ -278,6 +278,7 @@ const PatientForm: React.FC = () => {
           console.log("PHR ID not found");
           return;
         } else {
+          // Check if PHR ID already has a FHIR ID
           if (phrDoc.data()?.fhirId) {
             await setDoc(userDocRef, {
               resourceType: "Patient",
@@ -290,7 +291,7 @@ const PatientForm: React.FC = () => {
                 { system: "email", value: email },
               ],
             });
-
+            // struktur UPDATE
             const newPatient: Patient = {
               resourceType: "Patient",
               id: `${phrDoc.data()?.fhirId}`,
@@ -394,6 +395,7 @@ const PatientForm: React.FC = () => {
             setPatient(savedPatient);
             setJsonResult(savedPatient);
           } else {
+            // DATA BARU
             await setDoc(phrDocRef, {
               googleId: user.uid,
               phrId: phrId,
@@ -414,6 +416,7 @@ const PatientForm: React.FC = () => {
             const userData = userDoc.data();
             console.log(userData, "user terbaru");
 
+            // struktur DATA BARU
             const newPatient: Patient = {
               resourceType: "Patient",
               id: `${generatedId}`,
@@ -485,6 +488,45 @@ const PatientForm: React.FC = () => {
               ],
             };
 
+            const newToken = generateRandomToken();
+            setPatientToken(newToken);
+            console.log(newToken);
+
+            const { patient: savedPatient, hashMapping } = await createPatient(
+              newPatient,
+              true
+            );
+            await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
+            const newHashMapping = {
+              names: {
+                family: {
+                  [CryptoJS.SHA256(family).toString()]: family,
+                },
+                given: {
+                  [CryptoJS.SHA256(name).toString()]: name,
+                },
+              },
+              telecom: {
+                [CryptoJS.SHA256(phone).toString()]: phone,
+                [CryptoJS.SHA256(email).toString()]: email,
+              },
+            };
+
+            // setHashMapping(newHashMapping);
+
+            if (hashMapping) {
+              const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
+              await setDoc(mappingDocRef, {
+                mapping: hashMapping,
+                token: newToken,
+              });
+            }
+
+            const encryptedPatient = await createPatient(newPatient, true);
+
+            setPatient(encryptedPatient.patient);
+            setJsonResult(encryptedPatient.patient);
+
             // const newHashMapping = {
             //   names: {
             //     family: {
@@ -520,6 +562,7 @@ const PatientForm: React.FC = () => {
           }
         }
       }
+      // window.location.href = "/profile";
     });
   };
 
