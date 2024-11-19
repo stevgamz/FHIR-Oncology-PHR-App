@@ -89,12 +89,16 @@ interface PatientErrors {
 
 interface PatientDataProps {
   id: string;
-  name: string;
-  family: string;
+  name?: Array<{
+    given: string;
+    family: string;
+  }>;
   gender: string;
   birthDate: string;
-  email?: string;
-  phone?: string;
+  telecom?: Array<{
+    system: string;
+    value: string;
+  }>;
 }
 
 interface HashMapping {
@@ -176,9 +180,9 @@ const PatientForm: React.FC = () => {
   });
 
   const [patientToken, setPatientToken] = useState<string>("");
-  const [inputToken, setInputToken] = useState<string>("");
-  const [isTokenValid, setIsTokenValid] = useState<boolean>(false);
-  const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
+  // const [inputToken, setInputToken] = useState<string>("");
+  // const [isTokenValid, setIsTokenValid] = useState<boolean>(false);
+  // const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
 
   const generateRandomToken = (): string => {
     const tokenLength = 8;
@@ -394,6 +398,32 @@ const PatientForm: React.FC = () => {
 
             setPatient(savedPatient);
             setJsonResult(savedPatient);
+
+            const patientDataToPass: PatientDataProps = {
+              id: savedPatient.id,
+              name: [
+                savedPatient.name?.[0]?.given?.[0] || "",
+                savedPatient.name?.[0]?.family || "",
+              ],
+              birthDate: savedPatient.birthDate,
+              gender: savedPatient.gender,
+              telecom: [
+                {
+                  system: savedPatient.telecom?.[0]?.system || "",
+                  value: savedPatient.telecom?.[0]?.value || "",
+                },
+                {
+                  system: savedPatient.telecom?.[1]?.system || "",
+                  value: savedPatient.telecom?.[1]?.value || "",
+                },
+              ],
+            };
+
+            navigate("/observation", {
+              state: {
+                patientData: patientDataToPass,
+              },
+            });
           } else {
             // DATA BARU
             await setDoc(phrDocRef, {
@@ -517,7 +547,7 @@ const PatientForm: React.FC = () => {
             if (hashMapping) {
               const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
               await setDoc(mappingDocRef, {
-                mapping: hashMapping,
+                mapping: newHashMapping,
                 token: newToken,
               });
             }
@@ -526,6 +556,32 @@ const PatientForm: React.FC = () => {
 
             setPatient(encryptedPatient.patient);
             setJsonResult(encryptedPatient.patient);
+
+            const patientDataToPass: PatientDataProps = {
+              id: savedPatient.id,
+              name: [
+                savedPatient.name?.[0]?.given?.[0] || "",
+                savedPatient.name?.[0]?.family || "",
+              ],
+              birthDate: savedPatient.birthDate,
+              gender: savedPatient.gender,
+              telecom: [
+                {
+                  system: savedPatient.telecom?.[0]?.system || "",
+                  value: savedPatient.telecom?.[0]?.value || "",
+                },
+                {
+                  system: savedPatient.telecom?.[1]?.system || "",
+                  value: savedPatient.telecom?.[1]?.value || "",
+                },
+              ],
+            };
+
+            navigate("/observation", {
+              state: {
+                patientData: patientDataToPass,
+              },
+            });
 
             // const newHashMapping = {
             //   names: {
@@ -554,6 +610,14 @@ const PatientForm: React.FC = () => {
             // setPatient(encryptedPatient.patient);
             // setJsonResult(encryptedPatient.patient);
 
+            // const patientDataToPass: PatientDataProps = {
+            //   id: savedPatient.id,
+            //   name: savedPatient.name,
+            //   family: savedPatient.family,
+            //   birthDate: savedPatient.birthDate,
+            //   gender: savedPatient.gender,
+            // };
+
             // navigate("/observation", {
             //   state: {
             //     patientData: patientDataToPass,
@@ -566,98 +630,98 @@ const PatientForm: React.FC = () => {
     });
   };
 
-  const verifyToken = async (
-    patientId: string,
-    inputToken: string
-  ): Promise<boolean> => {
-    try {
-      const tokenDoc = await getDoc(doc(db, "PatientTokens", patientId));
-      if (tokenDoc.exists()) {
-        const storedToken = tokenDoc.data().token;
-        return storedToken === inputToken;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error verifying token:", error);
-      return false;
-    }
-  };
+  // const verifyToken = async (
+  //   patientId: string,
+  //   inputToken: string
+  // ): Promise<boolean> => {
+  //   try {
+  //     const tokenDoc = await getDoc(doc(db, "PatientTokens", patientId));
+  //     if (tokenDoc.exists()) {
+  //       const storedToken = tokenDoc.data().token;
+  //       return storedToken === inputToken;
+  //     }
+  //     return false;
+  //   } catch (error) {
+  //     console.error("Error verifying token:", error);
+  //     return false;
+  //   }
+  // };
 
-  const handleReveal = async () => {
-    if (!JsonResult?.id) {
-      alert("No patient data to reveal");
-      return;
-    }
+  // const handleReveal = async () => {
+  //   if (!JsonResult?.id) {
+  //     alert("No patient data to reveal");
+  //     return;
+  //   }
 
-    try {
-      if (!isTokenValid) {
-        setShowTokenInput(true);
-        return;
-      }
-      const user = auth.currentUser;
-      if (!user) {
-        console.error("No user logged in");
-        return;
-      }
+  //   try {
+  //     if (!isTokenValid) {
+  //       setShowTokenInput(true);
+  //       return;
+  //     }
+  //     const user = auth.currentUser;
+  //     if (!user) {
+  //       console.error("No user logged in");
+  //       return;
+  //     }
 
-      const mappingDoc = await getDoc(doc(db, "HashMappings", JsonResult.id));
-      if (!mappingDoc.exists()) {
-        console.error("No hash mapping found");
-        return;
-      }
+  //     const mappingDoc = await getDoc(doc(db, "HashMappings", JsonResult.id));
+  //     if (!mappingDoc.exists()) {
+  //       console.error("No hash mapping found");
+  //       return;
+  //     }
 
-      const storedMapping = mappingDoc.data().mapping;
+  //     const storedMapping = mappingDoc.data().mapping;
 
-      const decryptedPatient = await readPatient(JsonResult.id, storedMapping);
+  //     const decryptedPatient = await readPatient(JsonResult.id, storedMapping);
 
-      setPatient(decryptedPatient);
-      setJsonResult(decryptedPatient);
+  //     setPatient(decryptedPatient);
+  //     setJsonResult(decryptedPatient);
 
-      setName(decryptedPatient.name?.[0]?.given?.[0] || "");
-      setFamily(decryptedPatient.name?.[0]?.family || "");
-      setPhone(
-        decryptedPatient.telecom?.find(
-          (t: { system: string }) => t.system === "phone"
-        )?.value || ""
-      );
-      setEmail(
-        decryptedPatient.telecom?.find(
-          (t: { system: string }) => t.system === "email"
-        )?.value || ""
-      );
-    } catch (error) {
-      console.error("Error revealing patient data:", error);
-      alert("Failed to reveal patient data. Please try again.");
-    }
-  };
+  //     setName(decryptedPatient.name?.[0]?.given?.[0] || "");
+  //     setFamily(decryptedPatient.name?.[0]?.family || "");
+  //     setPhone(
+  //       decryptedPatient.telecom?.find(
+  //         (t: { system: string }) => t.system === "phone"
+  //       )?.value || ""
+  //     );
+  //     setEmail(
+  //       decryptedPatient.telecom?.find(
+  //         (t: { system: string }) => t.system === "email"
+  //       )?.value || ""
+  //     );
+  //   } catch (error) {
+  //     console.error("Error revealing patient data:", error);
+  //     alert("Failed to reveal patient data. Please try again.");
+  //   }
+  // };
 
-  const handleTokenSubmit = async () => {
-    if (!JsonResult?.id) return;
+  // const handleTokenSubmit = async () => {
+  //   if (!JsonResult?.id) return;
 
-    const isValid = await verifyToken(JsonResult.id, inputToken);
-    if (isValid) {
-      setIsTokenValid(true);
-      setShowTokenInput(false);
-      handleReveal();
-    } else {
-      alert("Invalid token. Please try again.");
-      setInputToken("");
-    }
+  //   const isValid = await verifyToken(JsonResult.id, inputToken);
+  //   if (isValid) {
+  //     setIsTokenValid(true);
+  //     setShowTokenInput(false);
+  //     handleReveal();
+  //   } else {
+  //     alert("Invalid token. Please try again.");
+  //     setInputToken("");
+  //   }
 
-    const patientDataToPass: PatientDataProps = {
-      id: JsonResult?.id || "",
-      name: JsonResult?.name?.[0]?.given?.[0] || "",
-      family: JsonResult?.name?.[0]?.family || "",
-      gender: JsonResult?.gender || "",
-      birthDate: JsonResult?.birthDate || "",
-    };
+  //   const patientDataToPass: PatientDataProps = {
+  //     id: JsonResult?.id || "",
+  //     name: JsonResult?.name?.[0]?.given?.[0] || "",
+  //     family: JsonResult?.name?.[0]?.family || "",
+  //     gender: JsonResult?.gender || "",
+  //     birthDate: JsonResult?.birthDate || "",
+  //   };
 
-    navigate("/observation", {
-      state: {
-        patientData: patientDataToPass,
-      },
-    });
-  };
+  //   navigate("/observation", {
+  //     state: {
+  //       patientData: patientDataToPass,
+  //     },
+  //   });
+  // };
 
   // const handleDelete = async (id: string) => {
   //   await deletePatient(id);
@@ -903,7 +967,7 @@ const PatientForm: React.FC = () => {
           </button>
         </div> */}
 
-        {JsonResult && (
+        {/* {JsonResult && (
           <div className="mt-4">
             <button
               onClick={handleReveal}
@@ -912,7 +976,6 @@ const PatientForm: React.FC = () => {
               Reveal Original Data
             </button>
 
-            {/* Token Input Modal/Dialog */}
             {showTokenInput && (
               <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
                 <div className="bg-white p-6 rounded-lg shadow-lg">
@@ -946,7 +1009,7 @@ const PatientForm: React.FC = () => {
               </div>
             )}
           </div>
-        )}
+        )} */}
 
         <div className="bg-gray-100 p-6 rounded-lg shadow-inner w-full max-w-lg mt-4">
           <h2 className="text-xl font-bold text-gray-800 mb-4">

@@ -304,6 +304,7 @@ interface Patient {
 
 interface Observation {
   id?: string;
+  // url: string;
   // code: string;
   // value: string;
 }

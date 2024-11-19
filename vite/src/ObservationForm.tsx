@@ -3,15 +3,30 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { createObservation } from "./FhirService";
 import "./index.css";
 import { useEffect } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "./Firebase";
+import {
+  doc,
+  DocumentData,
+  getDoc,
+  setDoc,
+  collection,
+} from "firebase/firestore";
 
 interface PatientDataProps {
   id: string;
-  name: string;
-  family: string;
+  name: Array<{
+    use: string;
+    family: string;
+    given: Array<string>;
+  }>;
   gender: string;
   birthDate: string;
-  email?: string;
-  phone?: string;
+  telecom?: Array<{
+    system: string;
+    value: string;
+  }>;
+  observations?: Observation;
 }
 
 interface VitalSignValues {
@@ -32,6 +47,9 @@ interface Observation {
 }
 
 const ObservationForm: React.FC = () => {
+  const [name, setName] = useState<string>("");
+  const [family, setFamily] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
   const navigate = useNavigate();
   const location = useLocation();
   const [patientData, setPatientData] = useState<PatientDataProps | null>(null);
@@ -47,9 +65,9 @@ const ObservationForm: React.FC = () => {
   const [status, setStatus] = useState<string>("final");
   const [JsonResult, setJsonResult] = useState<any>(null);
   const [errors, setErrors] = useState<Errors>({});
-  const [observations, setObservations] = useState<Observation>({
-    url: "",
-  });
+  const [observations, setObservations] = useState<PatientDataProps | null>(
+    null
+  );
 
   useEffect(() => {
     if (location.state?.patientData) {
@@ -71,7 +89,9 @@ const ObservationForm: React.FC = () => {
     text: {
       status: "generated",
       div: `<div xmlns="http://www.w3.org/1999/xhtml">
-        Patient: ${patientData?.name ?? ""} ${patientData?.family ?? ""}
+        Patient: ${patientData?.name?.[0]?.given ?? ""} ${
+        patientData?.name?.[0]?.family ?? ""
+      }
         Gender: ${patientData?.gender ?? ""}
         DOB: ${patientData?.birthDate ?? ""}
       </div>`,
@@ -101,7 +121,9 @@ const ObservationForm: React.FC = () => {
     },
     subject: {
       reference: `Patient/${patientData?.id ?? ""}`,
-      display: `${patientData?.name ?? ""} ${patientData?.family ?? ""}`,
+      display: `${patientData?.name?.[0]?.given ?? ""} ${
+        patientData?.name?.[0]?.family ?? ""
+      }`,
     },
     effectiveDateTime: new Date(effectiveDateTime).toISOString(),
     valueQuantity: {
@@ -123,7 +145,9 @@ const ObservationForm: React.FC = () => {
     text: {
       status: "generated",
       div: `<div xmlns="http://www.w3.org/1999/xhtml">
-        Patient: ${patientData?.name ?? ""} ${patientData?.family ?? ""}
+        Patient: ${patientData?.name?.[0]?.given ?? ""} ${
+        patientData?.name?.[0]?.family ?? ""
+      }
         Gender: ${patientData?.gender ?? ""}
         DOB: ${patientData?.birthDate ?? ""}
       </div>`,
@@ -153,7 +177,9 @@ const ObservationForm: React.FC = () => {
     },
     subject: {
       reference: `Patient/${patientData?.id ?? ""}`,
-      display: `${patientData?.name ?? ""} ${patientData?.family ?? ""}`,
+      display: `${patientData?.name?.[0]?.given ?? ""} ${
+        patientData?.name?.[0]?.family ?? ""
+      }`,
     },
     effectiveDateTime: new Date(effectiveDateTime).toISOString(),
     valueQuantity: {
@@ -175,7 +201,9 @@ const ObservationForm: React.FC = () => {
     text: {
       status: "generated",
       div: `<div xmlns="http://www.w3.org/1999/xhtml">
-        Patient: ${patientData?.name ?? ""} ${patientData?.family ?? ""}
+        Patient: ${patientData?.name?.[0]?.given ?? ""} ${
+        patientData?.name?.[0]?.family ?? ""
+      }
         Gender: ${patientData?.gender ?? ""}
         DOB: ${patientData?.birthDate ?? ""}
       </div>`,
@@ -205,7 +233,9 @@ const ObservationForm: React.FC = () => {
     },
     subject: {
       reference: `Patient/${patientData?.id ?? ""}`,
-      display: `${patientData?.name ?? ""} ${patientData?.family ?? ""}`,
+      display: `${patientData?.name?.[0]?.given ?? ""} ${
+        patientData?.name?.[0]?.family ?? ""
+      }`,
     },
     effectiveDateTime: new Date(effectiveDateTime).toISOString(),
     valueQuantity: {
@@ -227,7 +257,9 @@ const ObservationForm: React.FC = () => {
     text: {
       status: "generated",
       div: `<div xmlns="http://www.w3.org/1999/xhtml">
-        Patient: ${patientData?.name ?? ""} ${patientData?.family ?? ""}
+        Patient: ${patientData?.name?.[0]?.given ?? ""} ${
+        patientData?.name?.[0]?.family ?? ""
+      }
         Gender: ${patientData?.gender ?? ""}
         DOB: ${patientData?.birthDate ?? ""}
       </div>`,
@@ -257,7 +289,9 @@ const ObservationForm: React.FC = () => {
     },
     subject: {
       reference: `Patient/${patientData?.id ?? ""}`,
-      display: `${patientData?.name ?? ""} ${patientData?.family ?? ""}`,
+      display: `${patientData?.name?.[0]?.given ?? ""} ${
+        patientData?.name?.[0]?.family ?? ""
+      }`,
     },
     effectiveDateTime: new Date(effectiveDateTime).toISOString(),
     component: [
@@ -310,7 +344,9 @@ const ObservationForm: React.FC = () => {
     text: {
       status: "generated",
       div: `<div xmlns="http://www.w3.org/1999/xhtml">
-        Patient: ${patientData?.name ?? ""} ${patientData?.family ?? ""}
+        Patient: ${patientData?.name?.[0]?.given ?? ""} ${
+        patientData?.name?.[0]?.family ?? ""
+      }
         Gender: ${patientData?.gender ?? ""}
         DOB: ${patientData?.birthDate ?? ""}
       </div>`,
@@ -340,7 +376,9 @@ const ObservationForm: React.FC = () => {
     },
     subject: {
       reference: `Patient/${patientData?.id ?? ""}`,
-      display: `${patientData?.name ?? ""} ${patientData?.family ?? ""}`,
+      display: `${patientData?.name?.[0]?.given ?? ""} ${
+        patientData?.name?.[0]?.family ?? ""
+      }`,
     },
     effectiveDateTime: new Date(effectiveDateTime).toISOString(),
     valueQuantity: {
@@ -379,39 +417,86 @@ const ObservationForm: React.FC = () => {
       setErrors(newErrors);
       return;
     }
-
-    const newObservations: Observation = {
+    const newObservations = {
       url: `https://hapi.fhir.tw/fhir/Observation?category=vital-signs&subject=${patientData?.id}`,
     };
 
-    setObservations(newObservations);
-    console.log("Observations:", newObservations);
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const phrDocRef = doc(db, "PHR", user.uid);
+        const phrDoc = await getDoc(phrDocRef);
+        const phrId = phrDoc.data()?.phrId;
+        console.log("PHR ID:", phrId);
+        const userDocRef = doc(db, "Users", phrId);
 
-    try {
-      const observations = [
-        createBodyWeightObservation(),
-        createBodyHeightObservation(),
-        createBodyTemperatureObservation(),
-        createBloodPressureObservation(),
-        createOxygenSaturationObservation(),
-      ];
+        if (!phrId) {
+          console.error("PHR ID not found");
+          return;
+        } else {
+          if (phrDoc.data()?.fhirId) {
+            await setDoc(userDocRef, {
+              ...patientData,
+              observations: newObservations,
+            });
 
-      const results = await Promise.all(
-        observations.map((obs) => createObservation(obs))
-      );
+            const newPatientDatawithObservations: PatientDataProps = {
+              ...patientData,
+              id: patientData?.id ?? "",
+              name: [
+                {
+                  use: "official",
+                  given: [patientData?.name?.[0]?.given?.[0] ?? ""],
+                  family: patientData?.name?.[0]?.family ?? "",
+                },
+              ],
+              birthDate: patientData?.birthDate ?? "",
+              telecom: [
+                {
+                  system: "phone",
+                  value: patientData?.telecom?.[0].value ?? "",
+                },
+                {
+                  system: "email",
+                  value: patientData?.telecom?.[1].value ?? "",
+                },
+              ],
+              gender: patientData?.gender ?? "",
+              observations: newObservations,
+            };
 
-      setJsonResult(results);
-      // navigate("/profile");
-      // navigate("/profile", {
-      //   state: {
-      //     patientData: patientData,
-      //     observations: results,
-      //   },
-      // });
-    } catch (error) {
-      console.error("Error saving observations:", error);
-      setErrors({ submit: "Failed to save observations" });
-    }
+            setObservations(newPatientDatawithObservations);
+
+            console.log("Observations:", newObservations);
+            console.log("Patient data:", newPatientDatawithObservations);
+
+            try {
+              const observations = [
+                createBodyWeightObservation(),
+                createBodyHeightObservation(),
+                createBodyTemperatureObservation(),
+                createBloodPressureObservation(),
+                createOxygenSaturationObservation(),
+              ];
+
+              const results = await Promise.all(
+                observations.map((obs) => createObservation(obs))
+              );
+
+              setJsonResult(results);
+              // navigate("/profile", {
+              //   state: {
+              //     patientData: patientData,
+              //     observations: results,
+              //   },
+              // });
+            } catch (error) {
+              console.error("Error saving observations:", error);
+              setErrors({ submit: "Failed to save observations" });
+            }
+          }
+        }
+      }
+    });
   };
 
   return (
@@ -657,3 +742,6 @@ const ObservationForm: React.FC = () => {
 };
 
 export default ObservationForm;
+function setName(arg0: any) {
+  throw new Error("Function not implemented.");
+}
