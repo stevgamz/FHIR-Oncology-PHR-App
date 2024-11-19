@@ -21,7 +21,6 @@ const AdminDashboard = () => {
           id: doc.id,
           ...doc.data(),
         }));
-
         setUsers(usersList);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -100,7 +99,6 @@ const AdminDashboard = () => {
         justifyContent: "center",
         alignItems: "center",
         height: "100vh",
-        backgroundColor: "#f0f2f5",
       }}
     >
       <div
