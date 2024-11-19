@@ -1,109 +1,62 @@
 import React, { useState } from "react";
-import "./index.css";
-import Navbar from "./Navbar";
-import Footer from "./Footer";
+import { useNavigate } from "react-router-dom";
+import { auth } from "./Firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { toast } from "react-toastify";
 
-const Login = () => {
+const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast.success("Logged in successfully", {
+        position: "top-center",
+      });
+      navigate("/patient-form");
+    } catch (error) {
+      toast.error("Failed to log in", {
+        position: "top-center",
+      });
+      console.error("Error logging in:", error);
+    }
+  };
 
   return (
-    <div className="bg-white flex items-center justify-center h-screen">
-      <div className="w-full max-w-md mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <i className="fas fa-arrow-left text-gray-600"></i>
-          <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-        </div>
-        <h2 className="text-2xl font-bold mb-6">Log in</h2>
-        <form>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h2 className="text-2xl font-bold mb-6">Login</h2>
+        <form onSubmit={handleLogin}>
           <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-medium mb-2"
-              htmlFor="email"
-            >
-              Email address or user name
-            </label>
+            <label className="block text-gray-700 mb-2">Email</label>
             <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="email"
-              type="text"
-              placeholder=""
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="w-full border border-gray-300 rounded px-4 py-2"
+              required
             />
           </div>
-          <div className="mb-4 relative">
-            <label
-              className="block text-gray-700 text-sm font-medium mb-2"
-              htmlFor="password"
-            >
-              Password
-            </label>
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2">Password</label>
             <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="password"
               type="password"
-              placeholder=""
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-gray-300 rounded px-4 py-2"
+              required
             />
-            <i className="fas fa-eye-slash absolute right-3 top-10 text-gray-500 cursor-pointer"></i>
           </div>
-          <div className="mb-4 flex items-center">
-            <input
-              className="mr-2 leading-tight"
-              type="checkbox"
-              id="remember-me"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-            />
-            <label className="text-sm text-gray-700" htmlFor="remember-me">
-              Remember me
-            </label>
-          </div>
-          <p className="text-sm text-gray-600 mb-6">
-            By continuing, you agree to the{" "}
-            <a href="#" className="text-blue-600">
-              Terms of use
-            </a>{" "}
-            and{" "}
-            <a href="#" className="text-blue-600">
-              Privacy Policy
-            </a>
-            .
-          </p>
           <button
-            className="w-full bg-gray-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            type="button"
+            type="submit"
+            className="bg-teal-600 text-white px-4 py-2 rounded w-full"
           >
-            Log in
+            Login
           </button>
         </form>
-        <div className="mt-6 text-center">
-          <a href="#" className="text-sm text-gray-600">
-            Forget your password
-          </a>
-        </div>
-        <div className="mt-2 text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{" "}
-            <a href="#" className="text-blue-600">
-              Sign up
-            </a>
-          </p>
-        </div>
-        <div className="mt-6 flex items-center justify-center">
-          <div className="border-t border-gray-300 w-full"></div>
-          <span className="px-3 text-gray-600">Or continue with</span>
-          <div className="border-t border-gray-300 w-full"></div>
-        </div>
-        <div className="mt-6 flex justify-center space-x-4">
-          <i className="fab fa-facebook text-blue-600 text-2xl"></i>
-          <i className="fab fa-apple text-gray-800 text-2xl"></i>
-          <i className="fab fa-google text-red-600 text-2xl"></i>
-          <i className="fab fa-twitter text-blue-400 text-2xl"></i>
-        </div>
       </div>
     </div>
   );

@@ -1,10 +1,85 @@
-import React from "react";
-import ReactDOM from "react-dom";
+import React, { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import { auth, db } from "./Firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import "./index.css";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
 
 const Profile: React.FC = () => {
+  const [userDetails, setUserDetails] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const getUserDetails = async () => {
+    try {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+          const phrId = phrDoc.data()?.phrId;
+          const userDoc = await getDoc(doc(db, "Users", phrId));
+          if (userDoc.exists()) {
+            setUserDetails(userDoc.data());
+          } else {
+            console.error("User does not exist in the database");
+          }
+        }
+        setIsLoading(false);
+      });
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getUserDetails();
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setUserDetails((prevDetails: any) => ({
+      ...prevDetails,
+      [name]: value,
+    }));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+        const phrId = phrDoc.data()?.phrId;
+        await setDoc(doc(db, "Users", phrId), userDetails);
+        toast.success("Profile updated successfully", {
+          position: "top-center",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile", {
+        position: "top-center",
+      });
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await auth.signOut();
+      toast.success("Signed out successfully", {
+        position: "top-center",
+      });
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
+  if (isLoading) {
+    return <h2>Loading...</h2>;
+  }
+
   return (
     <div className="bg-gradient-to-b from-teal-100 to-white min-h-screen">
       {/* NAVBAR */}
@@ -20,151 +95,160 @@ const Profile: React.FC = () => {
           </p>
         </section>
         <section className="bg-white shadow-md rounded-lg p-8">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <div className="flex items-center mb-4 md:mb-0">
-              <img
-                src="https://placehold.co/100x100"
-                alt="User profile picture"
-                className="rounded-full w-24 h-24 object-cover mr-4"
-              />
-              <div>
-                <h3 className="text-xl font-bold">USER NAME</h3>
-              </div>
-            </div>
-            <div className="flex space-x-4">
-              <button className="bg-teal-600 text-white px-4 py-2 rounded">
-                Upload New Photo
-              </button>
-              <button className="border border-teal-600 text-teal-600 px-4 py-2 rounded">
-                Delete
-              </button>
-            </div>
-          </div>
-          <form>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-gray-600 mb-2">First Name</label>
-                <input
-                  type="text"
-                  placeholder="eg. Alaa"
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-600 mb-2">Last Name</label>
-                <input
-                  type="text"
-                  placeholder="eg. Mohamed"
-                  className="w-full border border-gray-300 rounded px-4 py-2"
-                />
-              </div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-600 mb-2">User Name</label>
-              <input
-                type="text"
-                placeholder="eg. alaa.mohamed"
-                className="w-full border border-gray-300 rounded px-4 py-2"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-gray-600 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
+          {userDetails ? (
+            <>
+              <form onSubmit={handleSave}>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-gray-600 mb-2">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      name="given"
+                      value={userDetails.name?.[0]?.given?.[0] || ""}
+                      onChange={handleInputChange}
+                      className="w-full border border-gray-300 rounded px-4 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-600 mb-2">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      name="family"
+                      value={userDetails.name?.[0]?.family || ""}
+                      onChange={handleInputChange}
+                      className="w-full border border-gray-300 rounded px-4 py-2"
+                    />
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-600 mb-2">Email</label>
                   <input
                     type="email"
-                    className="w-full border border-gray-300 rounded px-4 py-2 pl-10"
+                    name="email"
+                    value={
+                      userDetails.telecom?.find(
+                        (t: { system: string }) => t.system === "email"
+                      )?.value || ""
+                    }
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
                   />
-                  <i className="fas fa-envelope absolute left-3 top-3 text-gray-400"></i>
                 </div>
-              </div>
-              <div>
-                <label className="block text-gray-600 mb-2">Phone Number</label>
-                <div className="relative">
+                <div className="mb-4">
+                  <label className="block text-gray-600 mb-2">Phone</label>
                   <input
                     type="tel"
-                    className="w-full border border-gray-300 rounded px-4 py-2 pl-10"
+                    name="phone"
+                    value={
+                      userDetails.telecom?.find(
+                        (t: { system: string }) => t.system === "phone"
+                      )?.value || ""
+                    }
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
                   />
-                  <i className="fas fa-phone absolute left-3 top-3 text-gray-400"></i>
                 </div>
-              </div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-600 mb-2">Location</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded px-4 py-2 pl-10"
-                />
-                <i className="fas fa-map-marker-alt absolute left-3 top-3 text-gray-400"></i>
-              </div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-600 mb-2">Time Zone</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded px-4 py-2 pl-10"
-                />
-                <i className="fas fa-clock absolute left-3 top-3 text-gray-400"></i>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className="block text-gray-600 mb-2">
-                  Current Password
-                </label>
-                <div className="relative">
+                <div className="mb-4">
+                  <label className="block text-gray-600 mb-2">Address</label>
                   <input
-                    type="password"
-                    className="w-full border border-gray-300 rounded px-4 py-2 pl-10"
+                    type="text"
+                    name="line"
+                    value={
+                      userDetails.telecom?.find(
+                        (t: { system: string }) => t.system === "address"
+                      )?.value || ""
+                    }
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
                   />
-                  <i className="fas fa-key absolute left-3 top-3 text-gray-400"></i>
-                  <i className="fas fa-eye absolute right-3 top-3 text-gray-400"></i>
                 </div>
-              </div>
-              <div>
-                <label className="block text-gray-600 mb-2">New Password</label>
-                <div className="relative">
+                <div className="mb-4">
+                  <label className="block text-gray-600 mb-2">City</label>
                   <input
-                    type="password"
-                    className="w-full border border-gray-300 rounded px-4 py-2 pl-10"
+                    type="text"
+                    name="city"
+                    value={
+                      userDetails.telecom?.find(
+                        (t: { system: string }) => t.system === "city"
+                      )?.value || ""
+                    }
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
                   />
-                  <i className="fas fa-key absolute left-3 top-3 text-gray-400"></i>
-                  <i className="fas fa-eye absolute right-3 top-3 text-gray-400"></i>
                 </div>
-              </div>
-              <div>
-                <label className="block text-gray-600 mb-2">
-                  Confirm New Password
-                </label>
-                <div className="relative">
+                <div className="mb-4">
+                  <label className="block text-gray-600 mb-2">State</label>
                   <input
-                    type="password"
-                    className="w-full border border-gray-300 rounded px-4 py-2 pl-10"
+                    type="text"
+                    name="state"
+                    value={
+                      userDetails.telecom?.find(
+                        (t: { system: string }) => t.system === "state"
+                      )?.value || ""
+                    }
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
                   />
-                  <i className="fas fa-key absolute left-3 top-3 text-gray-400"></i>
-                  <i className="fas fa-eye absolute right-3 top-3 text-gray-400"></i>
                 </div>
-              </div>
-            </div>
-            <div className="flex justify-end space-x-4">
+                <div className="mb-4">
+                  <label className="block text-gray-600 mb-2">
+                    Postal Code
+                  </label>
+                  <input
+                    type="text"
+                    name="postalCode"
+                    value={
+                      userDetails.telecom?.find(
+                        (t: { system: string }) => t.system === "postalCode"
+                      )?.value || ""
+                    }
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-600 mb-2">Country</label>
+                  <input
+                    type="text"
+                    name="country"
+                    value={
+                      userDetails.telecom?.find(
+                        (t: { system: string }) => t.system === "country"
+                      )?.value || ""
+                    }
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
+                  />
+                </div>
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    className="border border-gray-300 text-gray-600 px-4 py-2 rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-teal-600 text-white px-4 py-2 rounded"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
               <button
-                type="button"
-                className="border border-gray-300 text-gray-600 px-4 py-2 rounded"
+                onClick={handleSignOut}
+                className="mt-4 bg-red-600 text-white px-4 py-2 rounded"
               >
-                Cancel
+                Sign Out
               </button>
-              <button
-                type="submit"
-                className="bg-teal-600 text-white px-4 py-2 rounded"
-              >
-                Save Changes
-              </button>
-            </div>
-          </form>
+            </>
+          ) : (
+            <h2>Loading...</h2>
+          )}
         </section>
       </main>
       {/* FOOTER */}

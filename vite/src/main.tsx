@@ -8,6 +8,6 @@ import Profile from "./Profile.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Profile />
+    <App />
   </StrictMode>
 );

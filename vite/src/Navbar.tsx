@@ -15,7 +15,7 @@ function Navbar() {
         <div className="container mx-auto flex justify-between items-center py-4 px-6">
           <div className="text-2xl font-bold text-teal-600">ONCOLOGY TIM</div>
           <nav className="hidden md:flex space-x-4">
-            <a href="#" className="text-gray-700 hover:text-teal-600">
+            <a href="/index" className="text-gray-700 hover:text-teal-600">
               Home
             </a>
             <a href="#" className="text-gray-700 hover:text-teal-600">
@@ -27,7 +27,7 @@ function Navbar() {
             <a href="#" className="text-gray-700 hover:text-teal-600">
               Medical Form
             </a>
-            <a href="#" className="text-gray-700 hover:text-teal-600">
+            <a href="/Profile" className="text-gray-700 hover:text-teal-600">
               Profile
             </a>
           </nav>
@@ -53,7 +53,7 @@ function Navbar() {
               <a href="#" className="text-gray-700 hover:text-teal-600">
                 Medical Form
               </a>
-              <a href="#" className="text-gray-700 hover:text-teal-600">
+              <a href="/Profile" className="text-gray-700 hover:text-teal-600">
                 Profile
               </a>
             </nav>

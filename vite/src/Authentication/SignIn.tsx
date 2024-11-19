@@ -60,6 +60,7 @@ const SignIn = () => {
               position: "top-center",
             });
             // window.location.href = "/profile";
+            // window.location.href = "/patient";
             window.location.href = "/patient";
           }
         } else {
@@ -89,7 +90,7 @@ const SignIn = () => {
               position: "top-center",
             });
           }
-          window.location.href = "/patient";
+          window.location.href = "/";
           // window.location.href = "/profile";
         }
       }

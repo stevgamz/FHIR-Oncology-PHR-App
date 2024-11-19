@@ -86,6 +86,30 @@ interface PatientErrors {
   patientGuardianPhone?: string;
 }
 
+interface PatientDataProps {
+  name: Array<{
+    use: string;
+    family: string;
+    given: Array<string>;
+  }>;
+  telecom?: Array<{
+    system: string;
+    value: string;
+  }>;
+  gender?: string;
+  birthDate?: string;
+  address?: Array<{
+    use?: string;
+    type?: string;
+    text?: string;
+    line: Array<string>;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  }>;
+}
+
 const PatientForm: React.FC = () => {
   //set name, family, email in the form after login
   const userData = async () => {
@@ -311,6 +335,32 @@ const PatientForm: React.FC = () => {
             const encryptedPatient = await createPatient(newPatient, true);
             setPatient(encryptedPatient);
             setJsonResult(savedPatient);
+            const savedPatientData: PatientDataProps = {
+              telecom: [
+                { system: "phone", value: phone },
+                { system: "email", value: email },
+              ],
+              gender,
+              birthDate,
+              name: [
+                {
+                  use: "official",
+                  family: family,
+                  given: [name],
+                },
+              ],
+              address: [
+                {
+                  use: "home",
+                  line: [addressLine],
+                  city: city,
+                  state: state,
+                  postalCode: postalCode,
+                  country: country,
+                },
+              ],
+            };
+            navigate("/Profile", { state: savedPatientData });
           } else {
             // create PHR & patient document with fhirId
             await setDoc(phrDocRef, {
@@ -405,6 +455,17 @@ const PatientForm: React.FC = () => {
             const encryptedPatient = await createPatient(newPatient, true);
             setPatient(encryptedPatient);
             setJsonResult(savedPatient);
+
+            const savedPatientData: PatientDataProps = {
+              name: [
+                {
+                  use: "official",
+                  family: family,
+                  given: [name],
+                },
+              ],
+            };
+            navigate("/Profile", { state: savedPatientData });
           }
         }
       }
