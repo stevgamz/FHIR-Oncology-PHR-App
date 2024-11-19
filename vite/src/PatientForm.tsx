@@ -393,12 +393,6 @@ const PatientForm: React.FC = () => {
 
             setPatient(savedPatient);
             setJsonResult(savedPatient);
-
-            // navigate("/observation", {
-            //   state: {
-            //     patientData: patientDataToPass,
-            //   },
-            // });
           } else {
             await setDoc(phrDocRef, {
               googleId: user.uid,
@@ -491,32 +485,32 @@ const PatientForm: React.FC = () => {
               ],
             };
 
-            const newHashMapping = {
-              names: {
-                family: {
-                  [CryptoJS.SHA256(family).toString()]: family,
-                },
-                given: {
-                  [CryptoJS.SHA256(name).toString()]: name,
-                },
-              },
-              telecom: {
-                [CryptoJS.SHA256(phone).toString()]: phone,
-                [CryptoJS.SHA256(email).toString()]: email,
-              },
-            };
+            // const newHashMapping = {
+            //   names: {
+            //     family: {
+            //       [CryptoJS.SHA256(family).toString()]: family,
+            //     },
+            //     given: {
+            //       [CryptoJS.SHA256(name).toString()]: name,
+            //     },
+            //   },
+            //   telecom: {
+            //     [CryptoJS.SHA256(phone).toString()]: phone,
+            //     [CryptoJS.SHA256(email).toString()]: email,
+            //   },
+            // };
 
-            setHashMapping(newHashMapping);
+            // setHashMapping(newHashMapping);
 
-            if (user) {
-              const mappingDocRef = doc(db, "HashMappings", user.uid);
-              await setDoc(mappingDocRef, newHashMapping);
-            }
+            // if (user) {
+            //   const mappingDocRef = doc(db, "HashMappings", user.uid);
+            //   await setDoc(mappingDocRef, newHashMapping);
+            // }
 
-            // const savedPatient = await createPatient(newPatient, false);
-            const encryptedPatient = await createPatient(newPatient, true);
-            setPatient(encryptedPatient.patient);
-            setJsonResult(encryptedPatient.patient);
+            // // const savedPatient = await createPatient(newPatient, false);
+            // const encryptedPatient = await createPatient(newPatient, true);
+            // setPatient(encryptedPatient.patient);
+            // setJsonResult(encryptedPatient.patient);
 
             // navigate("/observation", {
             //   state: {
@@ -606,6 +600,20 @@ const PatientForm: React.FC = () => {
       alert("Invalid token. Please try again.");
       setInputToken("");
     }
+
+    const patientDataToPass: PatientDataProps = {
+      id: JsonResult?.id || "",
+      name: JsonResult?.name?.[0]?.given?.[0] || "",
+      family: JsonResult?.name?.[0]?.family || "",
+      gender: JsonResult?.gender || "",
+      birthDate: JsonResult?.birthDate || "",
+    };
+
+    navigate("/observation", {
+      state: {
+        patientData: patientDataToPass,
+      },
+    });
   };
 
   // const handleDelete = async (id: string) => {

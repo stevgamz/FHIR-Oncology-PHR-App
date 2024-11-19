@@ -27,6 +27,10 @@ interface Errors {
   [key: string]: string;
 }
 
+interface Observation {
+  url: string;
+}
+
 const ObservationForm: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,6 +47,9 @@ const ObservationForm: React.FC = () => {
   const [status, setStatus] = useState<string>("final");
   const [JsonResult, setJsonResult] = useState<any>(null);
   const [errors, setErrors] = useState<Errors>({});
+  const [observations, setObservations] = useState<Observation>({
+    url: "",
+  });
 
   useEffect(() => {
     if (location.state?.patientData) {
@@ -373,6 +380,13 @@ const ObservationForm: React.FC = () => {
       return;
     }
 
+    const newObservations: Observation = {
+      url: `https://hapi.fhir.tw/fhir/Observation?category=vital-signs&subject=${patientData?.id}`,
+    };
+
+    setObservations(newObservations);
+    console.log("Observations:", newObservations);
+
     try {
       const observations = [
         createBodyWeightObservation(),
@@ -388,12 +402,12 @@ const ObservationForm: React.FC = () => {
 
       setJsonResult(results);
       // navigate("/profile");
-      navigate("/profile", {
-        state: {
-          patientData: patientData,
-          observations: results,
-        },
-      });
+      // navigate("/profile", {
+      //   state: {
+      //     patientData: patientData,
+      //     observations: results,
+      //   },
+      // });
     } catch (error) {
       console.error("Error saving observations:", error);
       setErrors({ submit: "Failed to save observations" });
