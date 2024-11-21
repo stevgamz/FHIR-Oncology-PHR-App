@@ -15,19 +15,25 @@ function Navbar() {
         <div className="container mx-auto flex justify-between items-center py-4 px-6">
           <div className="text-2xl font-bold text-teal-600">ONCOLOGY TIM</div>
           <nav className="hidden md:flex space-x-4">
-            <a href="/index" className="text-gray-700 hover:text-teal-600">
+            <a
+              href="/phr"
+              className="text-gray-700 hover:text-teal-600 font-bold"
+            >
               Home
             </a>
-            <a href="#" className="text-gray-700 hover:text-teal-600">
+            <a href="#" className="text-gray-700 hover:text-teal-600 font-bold">
               About Us
             </a>
-            <a href="#" className="text-gray-700 hover:text-teal-600">
+            {/* <a href="#" className="text-gray-700 hover:text-teal-600 font-bold">
               Medical Service
             </a>
-            <a href="#" className="text-gray-700 hover:text-teal-600">
+            <a href="#" className="text-gray-700 hover:text-teal-600 font-bold">
               Medical Form
-            </a>
-            <a href="/Profile" className="text-gray-700 hover:text-teal-600">
+            </a> */}
+            <a
+              href="/Profile"
+              className="text-gray-700 hover:text-teal-600 font-bold"
+            >
               Profile
             </a>
           </nav>
@@ -41,19 +47,34 @@ function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden flex justify-center text-center">
             <nav className="flex flex-col space-y-2 px-6 py-4">
-              <a href="#" className="text-gray-700 hover:text-teal-600">
+              <a
+                href="/phr"
+                className="text-gray-700 hover:text-teal-600 font-bold"
+              >
                 Home
               </a>
-              <a href="#" className="text-gray-700 hover:text-teal-600">
+              <a
+                href="#"
+                className="text-gray-700 hover:text-teal-600 font-bold"
+              >
                 About Us
               </a>
-              <a href="#" className="text-gray-700 hover:text-teal-600">
+              {/* <a
+                href="#"
+                className="text-gray-700 hover:text-teal-600 font-bold"
+              >
                 Medical Service
               </a>
-              <a href="#" className="text-gray-700 hover:text-teal-600">
+              <a
+                href="#"
+                className="text-gray-700 hover:text-teal-600 font-bold"
+              >
                 Medical Form
-              </a>
-              <a href="/Profile" className="text-gray-700 hover:text-teal-600">
+              </a> */}
+              <a
+                href="/Profile"
+                className="text-gray-700 hover:text-teal-600 font-bold"
+              >
                 Profile
               </a>
             </nav>

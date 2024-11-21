@@ -5,11 +5,11 @@ import { Navigate } from "react-router-dom";
 export const PrivateRoute: React.FC<{
   component: React.ComponentType;
 }> = ({ component: Component }) => {
-  const { admin, loading } = useAuth();
+  const { users, loading } = useAuth();
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  return admin ? <Component /> : <Navigate to="/admin" />;
+  return users ? <Component /> : <Navigate to="/" />;
 };
