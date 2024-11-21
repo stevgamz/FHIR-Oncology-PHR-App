@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
 import { db } from "../Firebase";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+} from "firebase/firestore";
+import PatientForm from "../PatientForm";
 
 const AdminDashboard = () => {
   const { token, logout } = useAuth();
@@ -11,6 +18,7 @@ const AdminDashboard = () => {
   const [selectUser, setSelectUser] = useState<any>(null);
   const [adminToken, setAdminToken] = useState<string>("");
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<string[]>([]);
 
   const fetchData = async () => {
     if (token) {
@@ -21,7 +29,6 @@ const AdminDashboard = () => {
           id: doc.id,
           ...doc.data(),
         }));
-
         setUsers(usersList);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -30,6 +37,26 @@ const AdminDashboard = () => {
     } else {
       setError("Token not found");
     }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "Users"), (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const userData = change.doc.data();
+          setNotifications((prev) => [
+            ...prev,
+            `New user registered: ${userData?.name?.[0]?.given} ${userData?.name?.[0]?.family}`,
+          ]);
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const removeNotification = (index: number) => {
+    setNotifications((prev) => prev.filter((_, i) => i !== index));
   };
 
   useEffect(() => {
@@ -100,7 +127,6 @@ const AdminDashboard = () => {
         justifyContent: "center",
         alignItems: "center",
         height: "100vh",
-        backgroundColor: "#f0f2f5",
       }}
     >
       <div
@@ -123,6 +149,36 @@ const AdminDashboard = () => {
         >
           Admin Dashboard
         </h2>
+        <div>
+          {notifications.map((notification, index) => (
+            <div
+              key={index}
+              style={{
+                backgroundColor: "#e0ffe0",
+                padding: "10px",
+                margin: "10px 0",
+                borderRadius: "5px",
+                position: "relative",
+              }}
+            >
+              {notification}
+              <button
+                onClick={() => removeNotification(index)}
+                style={{
+                  position: "absolute",
+                  top: "5px",
+                  right: "10px",
+                  background: "none",
+                  border: "none",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                }}
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+        </div>
         <div>
           {users ? (
             <table
@@ -150,7 +206,7 @@ const AdminDashboard = () => {
                       backgroundColor: "#f9f9f9",
                     }}
                   >
-                    Detail
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -173,16 +229,15 @@ const AdminDashboard = () => {
                     >
                       <button
                         style={{
-                          padding: "8px 12px",
-                          backgroundColor: "#007bbf",
+                          padding: "5px 10px",
+                          backgroundColor: "#007bff",
                           color: "white",
-                          border: "none",
                           borderRadius: "5px",
                           cursor: "pointer",
                         }}
                         onClick={() => handleShowDetail(user)}
                       >
-                        Detail
+                        View Details
                       </button>
                     </td>
                   </tr>
@@ -190,74 +245,58 @@ const AdminDashboard = () => {
               </tbody>
             </table>
           ) : (
-            <div>
-              {error && (
-                <p style={{ color: "red", textAlign: "center" }}>{error}</p>
-              )}
-            </div>
+            <div> {error && <p style={{ color: "red" }}>{error}</p>}</div>
           )}
         </div>
         <button
           style={{
-            width: "25%",
-            padding: "10px",
-            marginTop: "20px",
-            backgroundColor: "#007bbf",
+            padding: "10px 20px",
+            backgroundColor: "#007bff",
             color: "white",
-            border: "none",
             borderRadius: "5px",
             cursor: "pointer",
+            marginTop: "20px",
           }}
           onClick={handleSignOut}
         >
           Sign Out
         </button>
-      </div>
 
-      {showTokenModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
+        {showTokenModal && (
           <div
             style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "white",
               padding: "20px",
               borderRadius: "10px",
-              backgroundColor: "white",
-              textAlign: "center",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
             }}
           >
-            <h3>Enter Token</h3>
+            <h3>Enter Admin Token</h3>
             <input
               type="text"
               value={adminToken}
               onChange={(e) => setAdminToken(e.target.value)}
               style={{
-                width: "80%",
+                width: "100%",
                 padding: "10px",
-                margin: "15px 0",
-                border: "1px solid #ddd",
+                marginBottom: "10px",
                 borderRadius: "5px",
+                border: "1px solid #ccc",
               }}
             />
+            {detailError && <p style={{ color: "red" }}>{detailError}</p>}
             <button
               style={{
-                marginRight: "10px",
-                padding: "10px",
-                backgroundColor: "#007bbf",
+                padding: "10px 20px",
+                backgroundColor: "#007bff",
                 color: "white",
-                border: "none",
                 borderRadius: "5px",
                 cursor: "pointer",
+                marginRight: "10px",
               }}
               onClick={handleTokenSubmit}
             >
@@ -265,10 +304,9 @@ const AdminDashboard = () => {
             </button>
             <button
               style={{
-                padding: "10px",
+                padding: "10px 20px",
                 backgroundColor: "#888",
                 color: "white",
-                border: "none",
                 borderRadius: "5px",
                 cursor: "pointer",
               }}
@@ -276,92 +314,88 @@ const AdminDashboard = () => {
             >
               Cancel
             </button>
-            {detailError && (
-              <p style={{ color: "red", marginTop: "10px" }}>{detailError}</p>
-            )}
           </div>
-        </div>
-      )}
-
-      {selectUser && selectUser.details && (
-        <div
-          style={{
-            position: "fixed",
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
+        )}
+        {selectUser && selectUser.details && (
           <div
             style={{
-              width: "1000px",
-              height: "450px",
-              padding: "20px",
-              alignContent: "center",
-              borderRadius: "10px",
-              backgroundColor: "white",
+              position: "fixed",
+              width: "100%",
+              height: "100%",
+              backgroundColor: "rgba(0, 0, 0, 0.8)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
             }}
           >
-            <h3
-              style={{
-                color: "#333",
-                fontSize: "20px",
-                fontWeight: "bold",
-                marginBottom: "10px",
-              }}
-            >
-              Details for Patient #{selectUser.id}
-            </h3>
             <div
               style={{
-                border: "1px solid #ddd",
-                borderRadius: "8px",
-                padding: "15px",
-                backgroundColor: "#f9f9f9",
+                width: "1000px",
+                height: "450px",
+                padding: "20px",
+                alignContent: "center",
+                borderRadius: "10px",
+                backgroundColor: "white",
               }}
             >
-              <p>
-                <strong>Name:</strong> {selectUser.name?.[0]?.given?.[0]}{" "}
-                {selectUser.name?.[0]?.family}
-              </p>
-              <p>
-                <strong>Given:</strong> {selectUser.name?.[0]?.given?.[0]}
-              </p>
-              <p>
-                <strong>Family:</strong> {selectUser.name?.[0]?.family}
-              </p>
-              <p>
-                <strong>Gender:</strong> {selectUser.gender}
-              </p>
-              <p>
-                <strong>Birth Date:</strong> {selectUser.birthDate}
-              </p>
-              <p>
-                <strong>Phone:</strong> {selectUser.telecom?.[0]?.value}
-              </p>
-              <p>
-                <strong>Email:</strong> {selectUser.telecom?.[1]?.value}
-              </p>
+              <h3
+                style={{
+                  color: "#333",
+                  fontSize: "20px",
+                  fontWeight: "bold",
+                  marginBottom: "10px",
+                }}
+              >
+                Details for Patient #{selectUser.id}
+              </h3>
+              <div
+                style={{
+                  border: "1px solid #ddd",
+                  borderRadius: "8px",
+                  padding: "15px",
+                  backgroundColor: "#f9f9f9",
+                }}
+              >
+                <p>
+                  <strong>Name:</strong> {selectUser.name?.[0]?.given?.[0]}{" "}
+                  {selectUser.name?.[0]?.family}
+                </p>
+                <p>
+                  <strong>Given:</strong> {selectUser.name?.[0]?.given?.[0]}
+                </p>
+                <p>
+                  <strong>Family:</strong> {selectUser.name?.[0]?.family}
+                </p>
+                <p>
+                  <strong>Gender:</strong> {selectUser.gender}
+                </p>
+                <p>
+                  <strong>Birth Date:</strong> {selectUser.birthDate}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {selectUser.telecom?.[0]?.value}
+                </p>
+                <p>
+                  <strong>Email:</strong> {selectUser.telecom?.[1]?.value}
+                </p>
+              </div>
+              <button
+                style={{
+                  marginTop: "20px",
+                  padding: "8px 12px",
+                  backgroundColor: "#888",
+                  color: "white",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                }}
+                onClick={() => setSelectUser(null)}
+              >
+                Back
+              </button>
             </div>
-            <button
-              style={{
-                marginTop: "20px",
-                padding: "8px 12px",
-                backgroundColor: "#888",
-                color: "white",
-                borderRadius: "5px",
-                cursor: "pointer",
-              }}
-              onClick={() => setSelectUser(null)}
-            >
-              Back
-            </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
