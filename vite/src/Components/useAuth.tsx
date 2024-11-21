@@ -10,7 +10,7 @@ import {
 const auth = getAuth();
 
 interface AuthContextType {
-  user: firebase.User | null;
+  users: firebase.User | null;
   loading: boolean;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -23,13 +23,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<firebase.User | null>(null);
+  const [users, setUsers] = useState<firebase.User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user as firebase.User | null);
+      setUsers(user as firebase.User | null);
+
       setLoading(false);
 
       if (user) {
@@ -57,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, token, login, register, logout }}
+      value={{ users, loading, token, login, register, logout }}
     >
       {children}
     </AuthContext.Provider>

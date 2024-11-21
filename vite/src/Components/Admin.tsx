@@ -45,50 +45,64 @@ const Admin = () => {
         >
           Sign In as Admin
         </h1>
-        <input
-          style={{
-            width: "100%",
-            padding: "10px",
-            marginBottom: "10px",
-            borderRadius: "5px",
-            border: "1px solid #ccc",
-            fontSize: "16px",
-          }}
-          type="text"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          style={{
-            width: "100%",
-            padding: "10px",
-            marginBottom: "10px",
-            borderRadius: "5px",
-            border: "1px solid #ccc",
-            fontSize: "16px",
-          }}
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button
-          style={{
-            width: "100%",
-            padding: "10px",
-            marginTop: "10px",
-            backgroundColor: "#007bbf",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
-          onClick={handleLogin}
-        >
-          Sign In
-        </button>
+        <form onSubmit={handleLogin}>
+          <input
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginBottom: "10px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              fontSize: "16px",
+            }}
+            type="text"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginBottom: "10px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              fontSize: "16px",
+            }}
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button
+            style={{
+              width: "100%",
+              padding: "10px",
+              marginTop: "10px",
+              backgroundColor: "#007bbf",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
+            type="submit"
+          >
+            Sign In
+          </button>
+        </form>
         {error && <p style={{ color: "red", marginTop: "5px" }}>{error}</p>}
+        <p style={{ marginTop: "10px", fontSize: "14px", color: "#555" }}>
+          Create an account?{" "}
+          <a
+            style={{
+              textDecorationLine: "underline",
+              color: "#007bbf",
+            }}
+            href="/registeradmin"
+          >
+            Register
+          </a>
+        </p>
       </div>
     </div>
   );

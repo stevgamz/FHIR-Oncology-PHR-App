@@ -130,12 +130,10 @@ const PatientForm: React.FC = () => {
           if (userDoc.exists()) {
             const userData = userDoc.data();
             const googlePatient = {
-              resourceType: "Patient",
               email: userData?.telecom?.[1]?.value || userData?.email,
               name: {
-                use: "official",
-                family: userData?.name?.[0]?.family,
                 given: [userData?.name?.[0]?.given?.[0]],
+                family: userData?.name?.[1]?.family,
               },
             };
 
@@ -169,7 +167,7 @@ const PatientForm: React.FC = () => {
   const [state, setState] = useState<string>("");
   const [postalCode, setPostalCode] = useState<string>("");
   const [country, setCountry] = useState<string>("");
-  const [managingOrganization, setManagingOrganization] = useState<string>("");
+  // const [managingOrganization, setManagingOrganization] = useState<string>("");
   const [errors, setErrors] = useState<PatientErrors>({});
   const [hashMapping, setHashMapping] = useState<HashMapping>({
     names: {
@@ -271,170 +269,401 @@ const PatientForm: React.FC = () => {
         Math.floor(1000 + Math.random() * 9000);
     }
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const phrDocRef = doc(db, "PHR", user.uid);
-        const phrDoc = await getDoc(phrDocRef);
-        const phrId = phrDoc.data()?.phrId;
-        const userDocRef = doc(db, "Users", phrId);
+    const newHashMapping = {
+      names: {
+        family: {
+          [CryptoJS.SHA256(family).toString()]: family,
+        },
+        given: {
+          [CryptoJS.SHA256(name).toString()]: name,
+        },
+      },
+      telecom: {
+        [CryptoJS.SHA256(phone).toString()]: phone,
+        [CryptoJS.SHA256(email).toString()]: email,
+      },
+    };
 
-        if (!phrId) {
-          console.log("PHR ID not found");
-          return;
-        } else {
-          // Check if PHR ID already has a FHIR ID
-          if (phrDoc.data()?.fhirId) {
-            await setDoc(userDocRef, {
-              resourceType: "Patient",
-              fhirId: phrDoc.data()?.fhirId,
-              name: [{ use: "official", family: family, given: [name] }],
-              gender: gender,
-              birthDate: birthDate,
-              telecom: [
-                { system: "phone", value: phone },
-                { system: "email", value: email },
-              ],
-            });
-            // struktur UPDATE
-            const newPatient: Patient = {
-              resourceType: "Patient",
-              id: `${phrDoc.data()?.fhirId}`,
-              meta: {
-                profile: [
-                  "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
-                ],
-              },
-              text: {
-                status: "generated",
-                div: '<div xmlns="http://www.w3.org/1999/xhtml">Kiki Fer, a male born on 2024-09-05</div>',
-              },
-              identifier: [
-                {
-                  use: "official",
-                  type: {
-                    coding: [
-                      {
-                        system: "http://terminology.hl7.org/CodeSystem/v2-0203",
-                        code: "MR",
-                        display: "Medical record number",
-                      },
-                    ],
-                  },
-                  system:
-                    "http://hospital.smarthealth.org/identifiers/patients",
-                  value: "12345",
-                },
-              ],
-              active: true,
-              name: [
-                {
-                  use: "official",
-                  family: family,
-                  given: [name],
-                },
-              ],
-              gender: gender,
-              birthDate: birthDate,
-              communication: [
-                {
-                  language: {
-                    coding: [
-                      {
-                        system: "urn:ietf:bcp:47",
-                        code: "zh-TW",
-                        display: "Chinese (Taiwan)",
-                      },
-                    ],
-                  },
-                },
-              ],
-              managingOrganization: {
-                reference: "Organization/org-hosp-example",
-              },
-              telecom: [
-                {
-                  system: "phone",
-                  value: phone,
-                },
-                {
-                  system: "email",
-                  value: email,
-                },
-              ],
-            };
-            const newToken = generateRandomToken();
-            setPatientToken(newToken);
-            console.log(newToken);
+    // onAuthStateChanged(auth, async (user) => {
+    //   if (user) {
+    //     const phrDocRef = doc(db, "PHR", user.uid);
+    //     const phrDoc = await getDoc(phrDocRef);
+    //     const phrId = phrDoc.data()?.phrId;
+    //     const userDocRef = doc(db, "Users", phrId);
 
-            const { patient: savedPatient, hashMapping } = await createPatient(
-              newPatient,
-              true
-            );
-            await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
-            const newHashMapping = {
-              names: {
-                family: {
-                  [CryptoJS.SHA256(family).toString()]: family,
-                },
-                given: {
-                  [CryptoJS.SHA256(name).toString()]: name,
-                },
-              },
-              telecom: {
-                [CryptoJS.SHA256(phone).toString()]: phone,
-                [CryptoJS.SHA256(email).toString()]: email,
-              },
-            };
+    //     if (!phrId) {
+    //       console.log("PHR ID not found");
+    //       return;
+    //     } else {
+    //       // Check if PHR ID already has a FHIR ID
+    //       if (phrDoc.data()?.fhirId) {
+    //         await setDoc(userDocRef, {
+    //           resourceType: "Patient",
+    //           fhirId: phrDoc.data()?.fhirId,
+    //           name: [{ use: "official", family: family, given: [name] }],
+    //           gender: gender,
+    //           birthDate: birthDate,
+    //           telecom: [
+    //             { system: "phone", value: phone },
+    //             { system: "email", value: email },
+    //           ],
+    //         });
+    //         // struktur UPDATE
+    //         const newPatient: Patient = {
+    //           resourceType: "Patient",
+    //           id: `${phrDoc.data()?.fhirId}`,
+    //           meta: {
+    //             profile: [
+    //               "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
+    //             ],
+    //           },
+    //           text: {
+    //             status: "generated",
+    //             div: '<div xmlns="http://www.w3.org/1999/xhtml">Kiki Fer, a male born on 2024-09-05</div>',
+    //           },
+    //           identifier: [
+    //             {
+    //               use: "official",
+    //               type: {
+    //                 coding: [
+    //                   {
+    //                     system: "http://terminology.hl7.org/CodeSystem/v2-0203",
+    //                     code: "MR",
+    //                     display: "Medical record number",
+    //                   },
+    //                 ],
+    //               },
+    //               system:
+    //                 "http://hospital.smarthealth.org/identifiers/patients",
+    //               value: "12345",
+    //             },
+    //           ],
+    //           active: true,
+    //           name: [
+    //             {
+    //               use: "official",
+    //               family: family,
+    //               given: [name],
+    //             },
+    //           ],
+    //           gender: gender,
+    //           birthDate: birthDate,
+    //           communication: [
+    //             {
+    //               language: {
+    //                 coding: [
+    //                   {
+    //                     system: "urn:ietf:bcp:47",
+    //                     code: "zh-TW",
+    //                     display: "Chinese (Taiwan)",
+    //                   },
+    //                 ],
+    //               },
+    //             },
+    //           ],
+    //           managingOrganization: {
+    //             reference: "Organization/org-hosp-example",
+    //           },
+    //           telecom: [
+    //             {
+    //               system: "phone",
+    //               value: phone,
+    //             },
+    //             {
+    //               system: "email",
+    //               value: email,
+    //             },
+    //           ],
+    //         };
+    //         const newToken = generateRandomToken();
+    //         setPatientToken(newToken);
+    //         console.log(newToken);
 
-            setHashMapping(newHashMapping);
+    //         const { patient: savedPatient, hashMapping } = await createPatient(
+    //           newPatient,
+    //           true
+    //         );
+    //         await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
+    //         const newHashMapping = {
+    //           names: {
+    //             family: {
+    //               [CryptoJS.SHA256(family).toString()]: family,
+    //             },
+    //             given: {
+    //               [CryptoJS.SHA256(name).toString()]: name,
+    //             },
+    //           },
+    //           telecom: {
+    //             [CryptoJS.SHA256(phone).toString()]: phone,
+    //             [CryptoJS.SHA256(email).toString()]: email,
+    //           },
+    //         };
 
-            if (hashMapping) {
-              const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
-              await setDoc(mappingDocRef, {
-                mapping: hashMapping,
-                token: newToken,
-              });
-            }
+    //         setHashMapping(newHashMapping);
 
-            setPatient(savedPatient);
-            setJsonResult(savedPatient);
+    //         if (hashMapping) {
+    //           const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
+    //           await setDoc(mappingDocRef, {
+    //             mapping: hashMapping,
+    //             token: newToken,
+    //           });
+    //         }
 
-            const patientDataToPass: PatientDataProps = {
-              id: savedPatient.id,
-              name: [
-                savedPatient.name?.[0]?.given?.[0] || "",
-                savedPatient.name?.[0]?.family || "",
-              ],
-              birthDate: savedPatient.birthDate,
-              gender: savedPatient.gender,
-              telecom: [
-                {
-                  system: savedPatient.telecom?.[0]?.system || "",
-                  value: savedPatient.telecom?.[0]?.value || "",
-                },
-                {
-                  system: savedPatient.telecom?.[1]?.system || "",
-                  value: savedPatient.telecom?.[1]?.value || "",
-                },
-              ],
-            };
+    //         setPatient(savedPatient);
+    //         setJsonResult(savedPatient);
 
-            navigate("/observation", {
-              state: {
-                patientData: patientDataToPass,
-              },
-            });
-          } else {
-            // DATA BARU
+    //         const patientDataToPass: PatientDataProps = {
+    //           id: savedPatient.id,
+    //           name: [
+    //             savedPatient.name?.[0]?.given?.[0] || "",
+    //             savedPatient.name?.[0]?.family || "",
+    //           ],
+    //           birthDate: savedPatient.birthDate,
+    //           gender: savedPatient.gender,
+    //           telecom: [
+    //             {
+    //               system: savedPatient.telecom?.[0]?.system || "",
+    //               value: savedPatient.telecom?.[0]?.value || "",
+    //             },
+    //             {
+    //               system: savedPatient.telecom?.[1]?.system || "",
+    //               value: savedPatient.telecom?.[1]?.value || "",
+    //             },
+    //           ],
+    //         };
+
+    //         navigate("/observation", {
+    //           state: {
+    //             patientData: patientDataToPass,
+    //           },
+    //         });
+    //       } else {
+    //         // DATA BARU
+    //         await setDoc(phrDocRef, {
+    //           googleId: user.uid,
+    //           phrId: phrId,
+    //           fhirId: generatedId,
+    //         });
+    //         await setDoc(userDocRef, {
+    //           resourceType: "Patient",
+    //           fhirId: generatedId,
+    //           name: [{ use: "official", family: family, given: [name] }],
+    //           gender: gender,
+    //           birthDate: birthDate,
+    //           telecom: [
+    //             { system: "phone", value: phone },
+    //             { system: "email", value: email },
+    //           ],
+    //         });
+    //         const userDoc = await getDoc(userDocRef);
+    //         const userData = userDoc.data();
+    //         console.log(userData, "user terbaru");
+
+    //         // struktur DATA BARU
+    //         const newPatient: Patient = {
+    //           resourceType: "Patient",
+    //           id: `${generatedId}`,
+    //           meta: {
+    //             profile: [
+    //               "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
+    //             ],
+    //           },
+    //           text: {
+    //             status: "generated",
+    //             div: `<div xmlns="http://www.w3.org/1999/xhtml">
+    //               Patient: ${name ?? ""} ${family ?? ""}
+    //               Gender: ${gender ?? ""}
+    //               DOB: ${birthDate ?? ""}
+    //             </div>`,
+    //           },
+    //           identifier: [
+    //             {
+    //               use: "official",
+    //               type: {
+    //                 coding: [
+    //                   {
+    //                     system: "http://terminology.hl7.org/CodeSystem/v2-0203",
+    //                     code: "MR",
+    //                     display: "Medical record number",
+    //                   },
+    //                 ],
+    //               },
+    //               system:
+    //                 "http://hospital.smarthealth.org/identifiers/patients",
+    //               value: "12345",
+    //             },
+    //           ],
+    //           active: true,
+    //           name: [
+    //             {
+    //               use: "official",
+    //               family: family,
+    //               given: [name],
+    //             },
+    //           ],
+    //           gender: gender,
+    //           birthDate: birthDate,
+    //           communication: [
+    //             {
+    //               language: {
+    //                 coding: [
+    //                   {
+    //                     system: "urn:ietf:bcp:47",
+    //                     code: "zh-TW",
+    //                     display: "Chinese (Taiwan)",
+    //                   },
+    //                 ],
+    //               },
+    //             },
+    //           ],
+    //           managingOrganization: {
+    //             reference: "Organization/org-hosp-example",
+    //           },
+    //           telecom: [
+    //             {
+    //               system: "phone",
+    //               value: phone,
+    //             },
+    //             {
+    //               system: "email",
+    //               value: email,
+    //             },
+    //           ],
+    //         };
+
+    //         const newToken = generateRandomToken();
+    //         setPatientToken(newToken);
+    //         console.log(newToken);
+
+    //         const { patient: savedPatient, hashMapping } = await createPatient(
+    //           newPatient,
+    //           true
+    //         );
+    //         await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
+    //         const newHashMapping = {
+    //           names: {
+    //             family: {
+    //               [CryptoJS.SHA256(family).toString()]: family,
+    //             },
+    //             given: {
+    //               [CryptoJS.SHA256(name).toString()]: name,
+    //             },
+    //           },
+    //           telecom: {
+    //             [CryptoJS.SHA256(phone).toString()]: phone,
+    //             [CryptoJS.SHA256(email).toString()]: email,
+    //           },
+    //         };
+
+    //         // setHashMapping(newHashMapping);
+
+    //         if (hashMapping) {
+    //           const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
+    //           await setDoc(mappingDocRef, {
+    //             mapping: newHashMapping,
+    //             token: newToken,
+    //           });
+    //         }
+
+    //         const encryptedPatient = await createPatient(newPatient, true);
+
+    //         setPatient(encryptedPatient.patient);
+    //         setJsonResult(encryptedPatient.patient);
+
+    //         const patientDataToPass: PatientDataProps = {
+    //           id: savedPatient.id,
+    //           name: [
+    //             savedPatient.name?.[0]?.given?.[0] || "",
+    //             savedPatient.name?.[0]?.family || "",
+    //           ],
+    //           birthDate: savedPatient.birthDate,
+    //           gender: savedPatient.gender,
+    //           telecom: [
+    //             {
+    //               system: savedPatient.telecom?.[0]?.system || "",
+    //               value: savedPatient.telecom?.[0]?.value || "",
+    //             },
+    //             {
+    //               system: savedPatient.telecom?.[1]?.system || "",
+    //               value: savedPatient.telecom?.[1]?.value || "",
+    //             },
+    //           ],
+    //         };
+
+    //         navigate("/observation", {
+    //           state: {
+    //             patientData: patientDataToPass,
+    //           },
+    //         });
+
+    //         // const newHashMapping = {
+    //         //   names: {
+    //         //     family: {
+    //         //       [CryptoJS.SHA256(family).toString()]: family,
+    //         //     },
+    //         //     given: {
+    //         //       [CryptoJS.SHA256(name).toString()]: name,
+    //         //     },
+    //         //   },
+    //         //   telecom: {
+    //         //     [CryptoJS.SHA256(phone).toString()]: phone,
+    //         //     [CryptoJS.SHA256(email).toString()]: email,
+    //         //   },
+    //         // };
+
+    //         // setHashMapping(newHashMapping);
+
+    //         // if (user) {
+    //         //   const mappingDocRef = doc(db, "HashMappings", user.uid);
+    //         //   await setDoc(mappingDocRef, newHashMapping);
+    //         // }
+
+    //         // // const savedPatient = await createPatient(newPatient, false);
+    //         // const encryptedPatient = await createPatient(newPatient, true);
+    //         // setPatient(encryptedPatient.patient);
+    //         // setJsonResult(encryptedPatient.patient);
+
+    //         // const patientDataToPass: PatientDataProps = {
+    //         //   id: savedPatient.id,
+    //         //   name: savedPatient.name,
+    //         //   family: savedPatient.family,
+    //         //   birthDate: savedPatient.birthDate,
+    //         //   gender: savedPatient.gender,
+    //         // };
+
+    //         // navigate("/observation", {
+    //         //   state: {
+    //         //     patientData: patientDataToPass,
+    //         //   },
+    //         // });
+    //       }
+    //     }
+    //   }
+    //   // window.location.href = "/profile";
+    // });
+
+    try {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          const phrDocRef = doc(db, "PHR", user.uid);
+          const phrDoc = await getDoc(phrDocRef);
+          const phrId = phrDoc.data()?.phrId;
+          if (!phrId) {
+            console.error("PHR ID not found");
+            return;
+          }
+          const userDocRef = doc(db, "Users", phrId);
+
+          // Pembuatan FHIR ID baru
+          if (!phrDoc.data()?.fhirId) {
             await setDoc(phrDocRef, {
               googleId: user.uid,
               phrId: phrId,
               fhirId: generatedId,
             });
             await setDoc(userDocRef, {
-              resourceType: "Patient",
               fhirId: generatedId,
-              name: [{ use: "official", family: family, given: [name] }],
+              name: [{ family: family, given: [name] }],
               gender: gender,
               birthDate: birthDate,
               telecom: [
@@ -442,11 +671,7 @@ const PatientForm: React.FC = () => {
                 { system: "email", value: email },
               ],
             });
-            const userDoc = await getDoc(userDocRef);
-            const userData = userDoc.data();
-            console.log(userData, "user terbaru");
 
-            // struktur DATA BARU
             const newPatient: Patient = {
               resourceType: "Patient",
               id: `${generatedId}`,
@@ -527,32 +752,149 @@ const PatientForm: React.FC = () => {
               true
             );
             await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
-            const newHashMapping = {
-              names: {
-                family: {
-                  [CryptoJS.SHA256(family).toString()]: family,
-                },
-                given: {
-                  [CryptoJS.SHA256(name).toString()]: name,
-                },
-              },
-              telecom: {
-                [CryptoJS.SHA256(phone).toString()]: phone,
-                [CryptoJS.SHA256(email).toString()]: email,
-              },
-            };
-
-            // setHashMapping(newHashMapping);
+            setHashMapping(newHashMapping);
 
             if (hashMapping) {
               const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
               await setDoc(mappingDocRef, {
-                mapping: newHashMapping,
+                mapping: hashMapping,
                 token: newToken,
               });
             }
 
             const encryptedPatient = await createPatient(newPatient, true);
+            setPatient(encryptedPatient.patient);
+            setJsonResult(encryptedPatient.patient);
+
+            const patientDataToPass: PatientDataProps = {
+              id: savedPatient.id,
+              name: [
+                savedPatient.name?.[0]?.given?.[0] || "",
+                savedPatient.name?.[0]?.family || "",
+              ],
+              birthDate: savedPatient.birthDate,
+              gender: savedPatient.gender,
+              telecom: [
+                {
+                  system: savedPatient.telecom?.[0]?.system || "",
+                  value: savedPatient.telecom?.[0]?.value || "",
+                },
+                {
+                  system: savedPatient.telecom?.[1]?.system || "",
+                  value: savedPatient.telecom?.[1]?.value || "",
+                },
+              ],
+            };
+
+            navigate("/observation", {
+              state: {
+                patientData: patientDataToPass,
+              },
+            });
+          } else {
+            // PEMBAHARUAN data pasien yang sudah ada
+            await setDoc(userDocRef, {
+              fhirId: phrDoc.data()?.fhirId,
+              name: [{ family: family, given: [name] }],
+              gender: gender,
+              birthDate: birthDate,
+              telecom: [
+                { system: "phone", value: phone },
+                { system: "email", value: email },
+              ],
+            });
+
+            const updatePatient: Patient = {
+              resourceType: "Patient",
+              id: `${phrDoc.data()?.fhirId}`,
+              meta: {
+                profile: [
+                  "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
+                ],
+              },
+              text: {
+                status: "generated",
+                div: `<div xmlns="http://www.w3.org/1999/xhtml">
+                  Patient: ${name ?? ""} ${family ?? ""}
+                  Gender: ${gender ?? ""}
+                  DOB: ${birthDate ?? ""}
+                </div>`,
+              },
+              identifier: [
+                {
+                  use: "official",
+                  type: {
+                    coding: [
+                      {
+                        system: "http://terminology.hl7.org/CodeSystem/v2-0203",
+                        code: "MR",
+                        display: "Medical record number",
+                      },
+                    ],
+                  },
+                  system:
+                    "http://hospital.smarthealth.org/identifiers/patients",
+                  value: "12345",
+                },
+              ],
+              active: true,
+              name: [
+                {
+                  use: "official",
+                  family: family,
+                  given: [name],
+                },
+              ],
+              gender: gender,
+              birthDate: birthDate,
+              communication: [
+                {
+                  language: {
+                    coding: [
+                      {
+                        system: "urn:ietf:bcp:47",
+                        code: "zh-TW",
+                        display: "Chinese (Taiwan)",
+                      },
+                    ],
+                  },
+                },
+              ],
+              managingOrganization: {
+                reference: "Organization/org-hosp-example",
+              },
+              telecom: [
+                {
+                  system: "phone",
+                  value: phone,
+                },
+                {
+                  system: "email",
+                  value: email,
+                },
+              ],
+            };
+
+            const newToken = generateRandomToken();
+            setPatientToken(newToken);
+            console.log(newToken);
+
+            const { patient: savedPatient, hashMapping } = await createPatient(
+              updatePatient,
+              true
+            );
+            await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
+            setHashMapping(newHashMapping);
+
+            if (hashMapping) {
+              const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
+              await setDoc(mappingDocRef, {
+                mapping: hashMapping,
+                token: newToken,
+              });
+            }
+
+            const encryptedPatient = await createPatient(updatePatient, true);
 
             setPatient(encryptedPatient.patient);
             setJsonResult(encryptedPatient.patient);
@@ -582,52 +924,13 @@ const PatientForm: React.FC = () => {
                 patientData: patientDataToPass,
               },
             });
-
-            // const newHashMapping = {
-            //   names: {
-            //     family: {
-            //       [CryptoJS.SHA256(family).toString()]: family,
-            //     },
-            //     given: {
-            //       [CryptoJS.SHA256(name).toString()]: name,
-            //     },
-            //   },
-            //   telecom: {
-            //     [CryptoJS.SHA256(phone).toString()]: phone,
-            //     [CryptoJS.SHA256(email).toString()]: email,
-            //   },
-            // };
-
-            // setHashMapping(newHashMapping);
-
-            // if (user) {
-            //   const mappingDocRef = doc(db, "HashMappings", user.uid);
-            //   await setDoc(mappingDocRef, newHashMapping);
-            // }
-
-            // // const savedPatient = await createPatient(newPatient, false);
-            // const encryptedPatient = await createPatient(newPatient, true);
-            // setPatient(encryptedPatient.patient);
-            // setJsonResult(encryptedPatient.patient);
-
-            // const patientDataToPass: PatientDataProps = {
-            //   id: savedPatient.id,
-            //   name: savedPatient.name,
-            //   family: savedPatient.family,
-            //   birthDate: savedPatient.birthDate,
-            //   gender: savedPatient.gender,
-            // };
-
-            // navigate("/observation", {
-            //   state: {
-            //     patientData: patientDataToPass,
-            //   },
-            // });
           }
         }
-      }
-      // window.location.href = "/profile";
-    });
+      });
+    } catch (error) {
+      console.error("Error saving patient:", error);
+      alert("Failed to save patient. Please try again.");
+    }
   };
 
   // const verifyToken = async (

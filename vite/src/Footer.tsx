@@ -1,5 +1,3 @@
-import React from "react";
-
 function footer() {
   return (
     <div id="footer">
@@ -10,7 +8,7 @@ function footer() {
               <h3 className="text-lg font-bold mb-2">Menu</h3>
               <ul>
                 <li>
-                  <a href="#" className="text-gray-400 hover:text-white">
+                  <a href="/phr" className="text-gray-400 hover:text-white">
                     Home
                   </a>
                 </li>
@@ -19,14 +17,14 @@ function footer() {
                     About Us
                   </a>
                 </li>
-                <li>
+                {/* <li>
                   <a href="#" className="text-gray-400 hover:text-white">
                     Medical Service
                   </a>
-                </li>
+                </li> */}
                 <li>
-                  <a href="#" className="text-gray-400 hover:text-white">
-                    Patient Form
+                  <a href="/profile" className="text-gray-400 hover:text-white">
+                    Profile
                   </a>
                 </li>
               </ul>
@@ -86,7 +84,7 @@ function footer() {
             </div>
           </div>
           <div className="text-center mt-8">
-            <p className="text-gray-400">&copy; 2023 FHIR ONCOLOGY UMM TIM</p>
+            <p className="text-gray-400">&copy; 2023 FHIR ONCOLOGY UMN TIM</p>
           </div>
         </div>
       </footer>

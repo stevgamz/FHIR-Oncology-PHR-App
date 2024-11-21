@@ -7,36 +7,61 @@ import "./index.css";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
 
+const fetchUserDetails = async (uid: string) => {
+  try {
+    const phrDoc = await getDoc(doc(db, "PHR", uid));
+    const phrId = phrDoc.data()?.phrId;
+    const userDoc = await getDoc(doc(db, "Users", phrId));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      console.log("userData", userData);
+
+      return {
+        given: userData?.name?.[0]?.given?.[0] || "",
+        family: userData?.name?.[0]?.family || "",
+        birthDate: userData?.birthDate,
+        gender: userData?.gender,
+        email:
+          userData?.telecom?.find(
+            (t: { system: string }) => t.system === "email"
+          )?.value || "",
+        phone:
+          userData?.telecom?.find(
+            (t: { system: string }) => t.system === "phone"
+          )?.value || "",
+      };
+    } else {
+      console.error("User does not exist in the database");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error fetching user details:", error);
+    return null;
+  }
+};
+
 const Profile: React.FC = () => {
   const [userDetails, setUserDetails] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const getUserDetails = async () => {
-    try {
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          const phrDoc = await getDoc(doc(db, "PHR", user.uid));
-          const phrId = phrDoc.data()?.phrId;
-          const userDoc = await getDoc(doc(db, "Users", phrId));
-          if (userDoc.exists()) {
-            setUserDetails(userDoc.data());
-          } else {
-            console.error("User does not exist in the database");
-          }
-        }
-        setIsLoading(false);
-      });
-    } catch (error) {
-      console.error("Error fetching user details:", error);
-      setIsLoading(false);
-    }
-  };
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getUserDetails();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userDetails = await fetchUserDetails(user.uid);
+
+        setUserDetails(userDetails);
+        console.log("userDetails", userDetails);
+      } else {
+        console.log("No user found");
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setUserDetails((prevDetails: any) => ({
       ...prevDetails,
@@ -76,7 +101,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return <h2>Loading...</h2>;
   }
 
@@ -106,7 +131,7 @@ const Profile: React.FC = () => {
                     <input
                       type="text"
                       name="given"
-                      value={userDetails.name?.[0]?.given?.[0] || ""}
+                      value={userDetails?.given}
                       onChange={handleInputChange}
                       className="w-full border border-gray-300 rounded px-4 py-2"
                     />
@@ -118,22 +143,44 @@ const Profile: React.FC = () => {
                     <input
                       type="text"
                       name="family"
-                      value={userDetails.name?.[0]?.family || ""}
+                      value={userDetails.family}
                       onChange={handleInputChange}
                       className="w-full border border-gray-300 rounded px-4 py-2"
                     />
                   </div>
                 </div>
                 <div className="mb-4">
+                  <label className="block text-gray-600 mb-2">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    name="birthDate"
+                    value={userDetails.birthDate}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-600 mb-2">Gender</label>
+                  <select
+                    value={userDetails.gender}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded px-4 py-2"
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                    <option value="unknown">Unknown</option>
+                  </select>
+                </div>
+                <div className="mb-4">
                   <label className="block text-gray-600 mb-2">Email</label>
                   <input
                     type="email"
                     name="email"
-                    value={
-                      userDetails.telecom?.find(
-                        (t: { system: string }) => t.system === "email"
-                      )?.value || ""
-                    }
+                    value={userDetails.email}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded px-4 py-2"
                   />
@@ -143,16 +190,12 @@ const Profile: React.FC = () => {
                   <input
                     type="tel"
                     name="phone"
-                    value={
-                      userDetails.telecom?.find(
-                        (t: { system: string }) => t.system === "phone"
-                      )?.value || ""
-                    }
+                    value={userDetails.phone}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded px-4 py-2"
                   />
                 </div>
-                <div className="mb-4">
+                {/* <div className="mb-4">
                   <label className="block text-gray-600 mb-2">Address</label>
                   <input
                     type="text"
@@ -223,25 +266,25 @@ const Profile: React.FC = () => {
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded px-4 py-2"
                   />
-                </div>
+                </div> */}
                 <div className="flex justify-end space-x-4">
-                  <button
+                  {/* <button
                     type="button"
                     className="border border-gray-300 text-gray-600 px-4 py-2 rounded"
                   >
                     Cancel
-                  </button>
+                  </button> */}
                   <button
                     type="submit"
                     className="bg-teal-600 text-white px-4 py-2 rounded"
                   >
-                    Save Changes
+                    Save
                   </button>
                 </div>
               </form>
               <button
                 onClick={handleSignOut}
-                className="mt-4 bg-red-600 text-white px-4 py-2 rounded"
+                className="flex mx-auto mt-4 bg-red-600 text-white px-4 py-2 rounded"
               >
                 Sign Out
               </button>
