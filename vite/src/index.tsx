@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./Firebase";
-import { doc, DocumentData, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import "./index.css";
 import Pinjol from "./assets/pinjolstip.jpeg";
 
@@ -62,7 +62,7 @@ const Index = () => {
     });
   };
 
-  const [patient, setPatient] = useState<PatientDataProps | null>(null);
+  const [patient] = useState<PatientDataProps | null>(null);
 
   const [name, setName] = useState<string>("");
   const [family, setFamily] = useState<string>("");

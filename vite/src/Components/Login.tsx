@@ -99,7 +99,7 @@ const Login = () => {
         const phrId = await createPHRDoc(user);
         if (phrId) {
           await createUserDoc(user, phrId);
-          window.location.href = "/patient";
+          window.location.href = "/patient/edit";
         }
       }
     } catch (error) {

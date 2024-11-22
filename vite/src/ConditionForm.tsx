@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./index.css";
-import { useNavigate } from "react-router-dom";
-import {
-  createCondition,
-  readCondition,
-  updateCondition,
-  deleteCondition,
-} from "./FhirService";
+import { createCondition } from "./FhirService";
 
 interface Condition {
   resourceType: string;
@@ -57,7 +51,6 @@ interface Errors {
 }
 
 const ConditionForm: React.FC = () => {
-  const navigate = useNavigate();
   const [condition, setCondition] = useState<Condition | null>(null);
   const [jsonResult, setJsonResult] = useState<Condition | null>(null);
 
@@ -68,7 +61,7 @@ const ConditionForm: React.FC = () => {
   const [subject, setSubject] = useState<string>("");
   const [onsetDateTime, setOnsetDateTime] = useState<string>("");
   const [recordedDate, setRecordedDate] = useState<string>("");
-  const [errors, setErrors] = useState<Errors>({});
+  const [errors] = useState<Errors>({});
 
   useEffect(() => {
     if (condition) {

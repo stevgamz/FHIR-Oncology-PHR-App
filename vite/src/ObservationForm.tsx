@@ -1,17 +1,11 @@
 import React, { useState, FormEvent } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { createObservation } from "./FhirService";
 import "./index.css";
 import { useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./Firebase";
-import {
-  doc,
-  DocumentData,
-  getDoc,
-  setDoc,
-  collection,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 interface PatientDataProps {
   id: string;
@@ -47,10 +41,6 @@ interface Observation {
 }
 
 const ObservationForm: React.FC = () => {
-  const [name, setName] = useState<string>("");
-  const [family, setFamily] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const navigate = useNavigate();
   const location = useLocation();
   const [patientData, setPatientData] = useState<PatientDataProps | null>(null);
   const [vitalSignValues, setVitalSignValues] = useState<VitalSignValues>({
@@ -77,6 +67,8 @@ const ObservationForm: React.FC = () => {
       console.error("No patient data received");
     }
   }, [location.state]);
+
+  observations;
 
   const createBodyWeightObservation = () => ({
     resourceType: "Observation",
@@ -742,6 +734,3 @@ const ObservationForm: React.FC = () => {
 };
 
 export default ObservationForm;
-function setName(arg0: any) {
-  throw new Error("Function not implemented.");
-}

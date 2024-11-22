@@ -7,11 +7,6 @@ interface Patient {
   telecom: { value: string }[];
 }
 
-interface EncryptedData {
-  data: string;
-  iv: string;
-}
-
 export class EncryptionService {
   private static readonly KEY_SIZE = 256;
   private static readonly ITERATION_COUNT = 1000;

@@ -1,11 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  function toggleMenu(
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ): void {
+  function toggleMenu(): void {
     setIsMenuOpen(!isMenuOpen);
   }
 

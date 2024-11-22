@@ -8,7 +8,6 @@ import {
   getDocs,
   onSnapshot,
 } from "firebase/firestore";
-import PatientForm from "../PatientForm";
 
 const AdminDashboard = () => {
   const { token, logout } = useAuth();

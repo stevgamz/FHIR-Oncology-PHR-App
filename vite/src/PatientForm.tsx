@@ -1,16 +1,11 @@
 import React, { useState, useEffect, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  createPatient,
-  readPatient,
-  updatePatient,
-  deletePatient,
-} from "./FhirService";
+import { createPatient } from "./FhirService";
 import "./index.css";
 // import CryptoJS from "crypto-js";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./Firebase";
-import { doc, DocumentData, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import CryptoJS from "crypto-js";
 
 interface Patient {
@@ -177,7 +172,10 @@ const PatientForm: React.FC = () => {
     telecom: {},
   });
 
+  hashMapping;
+
   const [patientToken, setPatientToken] = useState<string>("");
+  patientToken;
   // const [inputToken, setInputToken] = useState<string>("");
   // const [isTokenValid, setIsTokenValid] = useState<boolean>(false);
   // const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
@@ -196,7 +194,7 @@ const PatientForm: React.FC = () => {
   };
 
   const saveTokenToDatabase = async (
-    userId: string,
+    _userId: string,
     patientId: string,
     token: string
   ) => {
