@@ -8,8 +8,10 @@ import {
   getDocs,
   onSnapshot,
 } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const { token, logout } = useAuth();
   const [users, setUsers] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     if (token) {
       try {
-        const userCollection = collection(db, "Users");
+        const userCollection = collection(db, "Patient");
         const usersSnapshot = await getDocs(userCollection);
         const usersList = usersSnapshot.docs.map((doc) => ({
           id: doc.id,
@@ -39,14 +41,19 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "Users"), (snapshot) => {
+    const unsubscribe = onSnapshot(collection(db, "Patient"), (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
           const userData = change.doc.data();
           setNotifications((prev) => [
             ...prev,
-            `New user registered: ${userData?.name?.[0]?.given} ${userData?.name?.[0]?.family}`,
+            `New user registered: ${userData?.name?.[1]?.given?.[0]} ${userData?.name?.[0]?.family}`,
           ]);
+          setTimeout(() => {
+            setNotifications((prev) =>
+              prev.filter((notification) => notification !== prev[0])
+            );
+          }, 5000);
         }
       });
     });
@@ -84,7 +91,7 @@ const AdminDashboard = () => {
 
   const handleTokenSubmit = async () => {
     if (!selectUser) return;
-    const userDoc = await getDoc(doc(db, "Users", selectUser.id));
+    const userDoc = await getDoc(doc(db, "Patient", selectUser.id));
     const userData = userDoc.data();
     const fhirId = userData ? userData.fhirId : null;
     const isValid = await verifyToken(fhirId);
@@ -116,7 +123,7 @@ const AdminDashboard = () => {
 
   const handleSignOut = async () => {
     await logout();
-    window.location.href = "/admin";
+    navigate("/admin");
   };
 
   return (
@@ -315,86 +322,87 @@ const AdminDashboard = () => {
             </button>
           </div>
         )}
-        {selectUser && selectUser.details && (
+      </div>
+
+      {selectUser && selectUser.details && (
+        <div
+          style={{
+            position: "fixed",
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
           <div
             style={{
-              position: "fixed",
-              width: "100%",
-              height: "100%",
-              backgroundColor: "rgba(0, 0, 0, 0.8)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
+              width: "1000px",
+              height: "450px",
+              padding: "20px",
+              alignContent: "center",
+              borderRadius: "10px",
+              backgroundColor: "white",
             }}
           >
-            <div
+            <h3
               style={{
-                width: "1000px",
-                height: "450px",
-                padding: "20px",
-                alignContent: "center",
-                borderRadius: "10px",
-                backgroundColor: "white",
+                color: "#333",
+                fontSize: "20px",
+                fontWeight: "bold",
+                marginBottom: "10px",
               }}
             >
-              <h3
-                style={{
-                  color: "#333",
-                  fontSize: "20px",
-                  fontWeight: "bold",
-                  marginBottom: "10px",
-                }}
-              >
-                Details for Patient #{selectUser.id}
-              </h3>
-              <div
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                  padding: "15px",
-                  backgroundColor: "#f9f9f9",
-                }}
-              >
-                <p>
-                  <strong>Name:</strong> {selectUser.name?.[0]?.given?.[0]}{" "}
-                  {selectUser.name?.[0]?.family}
-                </p>
-                <p>
-                  <strong>Given:</strong> {selectUser.name?.[0]?.given?.[0]}
-                </p>
-                <p>
-                  <strong>Family:</strong> {selectUser.name?.[0]?.family}
-                </p>
-                <p>
-                  <strong>Gender:</strong> {selectUser.gender}
-                </p>
-                <p>
-                  <strong>Birth Date:</strong> {selectUser.birthDate}
-                </p>
-                <p>
-                  <strong>Phone:</strong> {selectUser.telecom?.[0]?.value}
-                </p>
-                <p>
-                  <strong>Email:</strong> {selectUser.telecom?.[1]?.value}
-                </p>
-              </div>
-              <button
-                style={{
-                  marginTop: "20px",
-                  padding: "8px 12px",
-                  backgroundColor: "#888",
-                  color: "white",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                }}
-                onClick={() => setSelectUser(null)}
-              >
-                Back
-              </button>
+              Details for Patient #{selectUser.id}
+            </h3>
+            <div
+              style={{
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                padding: "15px",
+                backgroundColor: "#f9f9f9",
+              }}
+            >
+              <p>
+                <strong>Name:</strong> {selectUser.name?.[1]?.given?.[0]}{" "}
+                {selectUser.name?.[0]?.family}
+              </p>
+              <p>
+                <strong>Given:</strong> {selectUser.name?.[1]?.given?.[0]}
+              </p>
+              <p>
+                <strong>Family:</strong> {selectUser.name?.[0]?.family}
+              </p>
+              <p>
+                <strong>Gender:</strong> {selectUser.gender}
+              </p>
+              <p>
+                <strong>Birth Date:</strong> {selectUser.birthDate}
+              </p>
+              <p>
+                <strong>Phone:</strong> {selectUser.telecom?.[0]?.value}
+              </p>
+              <p>
+                <strong>Email:</strong> {selectUser.telecom?.[1]?.value}
+              </p>
             </div>
+            <button
+              style={{
+                marginTop: "20px",
+                padding: "8px 12px",
+                backgroundColor: "#888",
+                color: "white",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+              onClick={() => setSelectUser(null)}
+            >
+              Back
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

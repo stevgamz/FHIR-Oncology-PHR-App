@@ -6,6 +6,7 @@ import GoogleButton from "react-google-button";
 import "react-toastify/dist/ReactToastify.css";
 import Pinjol from "../assets/pinjolstip.jpeg";
 import bg from "../assets/bg-phr.png";
+import { useNavigate } from "react-router-dom";
 
 const GeneratePHRID = () => {
   return (
@@ -14,56 +15,30 @@ const GeneratePHRID = () => {
   );
 };
 
-const createUserDoc = async (user: User, phrId: string) => {
-  const userDocRef = doc(db, "Users", phrId);
-  const userDoc = await getDoc(userDocRef);
-
-  if (!userDoc.exists()) {
-    await setDoc(userDocRef, {
-      email: user.email,
-      name: [
-        {
-          given: [user.displayName?.split(" ")[0]],
-        },
-        {
-          family: user.displayName?.split(" ")[1],
-        },
-      ],
-    });
-    toast.info("Update more data for Patient", {
-      position: "top-center",
-    });
-  }
-};
-
 const createPHRDoc = async (user: User) => {
   const phrDocRef = doc(db, "PHR", user.uid);
   const phrDoc = await getDoc(phrDocRef);
   const phrId = GeneratePHRID();
 
-  if (phrDoc.exists()) {
-    const phrData = phrDoc.data();
-    if (user.uid === phrData.googleId) {
-      toast.info("User already has a PHR ID", {
-        position: "top-center",
-      });
-      window.location.href = "/profile";
-    }
-  } else {
+  if (!phrDoc.exists()) {
     await setDoc(phrDocRef, {
       googleId: user.uid,
       phrId: phrId,
       fhirId: "",
     });
-    toast.success("Successfully create new PHR ID", {
+    toast.success("Successfully create new PHR", {
       position: "top-center",
+      autoClose: 3000,
     });
 
     return phrId;
+  } else {
+    return phrDoc.data()?.phrId;
   }
 };
 
 const Login = () => {
+  const navigate = useNavigate();
   const googleSignIn = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
@@ -91,21 +66,55 @@ const Login = () => {
           }
         } catch (error) {
           console.error("Error validating token:", error);
-          toast.error("Failed to sign in. Please try again.", {
+          toast.error("Unvalid Google Account", {
             position: "top-center",
           });
         }
 
         const phrId = await createPHRDoc(user);
         if (phrId) {
-          await createUserDoc(user, phrId);
-          window.location.href = "/patient/edit";
+          // await createPatientDoc(user, phrId);
+          const createPatientDoc = async (user: User, phrId: string) => {
+            const userDocRef = doc(db, "Patient", phrId);
+            const userDoc = await getDoc(userDocRef);
+            if (!userDoc.exists()) {
+              await setDoc(userDocRef, {
+                telecom: [
+                  {
+                    system: "email",
+                    value: user.email,
+                  },
+                ],
+                name: [
+                  {
+                    family: user.displayName?.split(" ")[1],
+                  },
+                  {
+                    given: [user.displayName?.split(" ")[0]],
+                  },
+                ],
+              });
+              toast.info("Complete patient detail data.", {
+                position: "top-center",
+                autoClose: 3000,
+              });
+              navigate("/profile");
+            } else {
+              toast.info(`Welcome Back, ${user.displayName}!`, {
+                position: "top-center",
+                autoClose: 3000,
+              });
+              navigate("/phr");
+            }
+          };
+          return createPatientDoc(user, phrId);
         }
       }
     } catch (error) {
       console.error("Error signing in:", error);
       toast.error("Failed to sign in. Please try again.", {
         position: "top-center",
+        autoClose: 3000,
       });
     }
   };

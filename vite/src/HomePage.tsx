@@ -7,15 +7,15 @@ import { doc, getDoc } from "firebase/firestore";
 import "./index.css";
 import Pinjol from "./assets/pinjolstip.jpeg";
 
-interface PatientDataProps {
-  name: Array<{
-    use: string;
-    family: string;
-    given: Array<string>;
-  }>;
-}
+// interface PatientDataProps {
+//   name: Array<{
+//     use: string;
+//     family: string;
+//     given: Array<string>;
+//   }>;
+// }
 
-const Index = () => {
+const HomePage = () => {
   // const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // function toggleMenu(
@@ -25,55 +25,58 @@ const Index = () => {
   //   throw new Error("Function not implemented.");
   // }
 
-  const userData = async () => {
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const phrDoc = await getDoc(doc(db, "PHR", user.uid));
-          const phrId = phrDoc.data()?.phrId;
-          if (!phrId) {
-            console.error("PHR ID not found");
-            return;
-          }
-          const userDoc = await getDoc(doc(db, "Users", phrId));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const googlePatient = {
-              resourceType: "Patient",
-              email: userData?.telecom?.[1]?.value,
-              name: {
-                use: "official",
-                family: userData?.name?.[0]?.family,
-                given: [userData?.name?.[0]?.given?.[0]],
-              },
-            };
-
-            setName(googlePatient?.name?.given?.[0] || "");
-            setFamily(googlePatient?.name?.family || "");
-
-            console.log(googlePatient, "Patient");
-          } else {
-            console.error("User does not exist in the database");
-          }
-        } catch (error) {
-          console.error("Error fetching data", error);
-        }
-      }
-    });
-  };
-
-  const [patient] = useState<PatientDataProps | null>(null);
+  // const [patient] = useState<PatientDataProps | null>(null);
 
   const [name, setName] = useState<string>("");
   const [family, setFamily] = useState<string>("");
 
+  // useEffect(() => {
+  //   if (patient) {
+  //     setName(patient?.name?.[0]?.given?.[0] || "");
+  //     setFamily(patient?.name?.[0]?.family || "");
+  //   }
+  //   userData();
+  // }, [patient]);
+
   useEffect(() => {
-    if (patient) {
-      setName(patient?.name?.[0]?.given?.[0] || "");
-      setFamily(patient?.name?.[0]?.family || "");
-    }
+    const userData = async () => {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          try {
+            const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+            const phrId = phrDoc.data()?.phrId;
+            if (!phrId) {
+              console.error("PHR ID not found");
+              return;
+            }
+            const userDoc = await getDoc(doc(db, "Patient", phrId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const googlePatient = {
+                resourceType: "Patient",
+                email: userData?.telecom?.[1]?.value,
+                name: {
+                  use: "official",
+                  given: [userData?.name?.[1]?.given?.[0]],
+                  family: userData?.name?.[0]?.family,
+                },
+              };
+
+              setName(googlePatient?.name?.given?.[0] || "");
+              setFamily(googlePatient?.name?.family || "");
+
+              console.log(googlePatient, "Patient");
+            } else {
+              console.error("User does not exist in the database");
+            }
+          } catch (error) {
+            console.error("Error fetching data", error);
+          }
+        }
+      });
+    };
     userData();
-  }, [patient]);
+  }, []);
 
   return (
     <div>
@@ -165,4 +168,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default HomePage;

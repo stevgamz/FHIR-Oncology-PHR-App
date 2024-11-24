@@ -1,17 +1,17 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Login from "./Components/Login";
+import HomePage from "./HomePage";
+import Profile from "./Profile";
 import PatientForm from "./PatientForm";
 import ObservationForm from "./ObservationForm";
 import ConditionForm from "./ConditionForm";
-import Profile from "./Profile";
 import Admin from "./Components/Admin";
-import Login from "./Components/Login";
 import AdminDashboard from "./Components/AdminDashboard";
-import Index from "./index";
 import RegisterAdmin from "./Components/RegisterAdmin";
 import { AuthProvider } from "./Components/useAuth";
 import { PrivateRoute } from "./Components/PrivateRoute";
 import { ToastContainer } from "react-toastify";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 const App: React.FC = () => {
   return (
@@ -21,7 +21,10 @@ const App: React.FC = () => {
         <div className="App">
           <Routes>
             <Route path="/" element={<Login />} />
-            <Route path="/phr" element={<PrivateRoute component={Index} />} />
+            <Route
+              path="/phr"
+              element={<PrivateRoute component={HomePage} />}
+            />
             <Route
               path="/profile"
               element={<PrivateRoute component={Profile} />}

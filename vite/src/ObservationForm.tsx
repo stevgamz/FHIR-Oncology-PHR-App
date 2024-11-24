@@ -419,7 +419,7 @@ const ObservationForm: React.FC = () => {
         const phrDoc = await getDoc(phrDocRef);
         const phrId = phrDoc.data()?.phrId;
         console.log("PHR ID:", phrId);
-        const userDocRef = doc(db, "Users", phrId);
+        const userDocRef = doc(db, "Patient", phrId);
 
         if (!phrId) {
           console.error("PHR ID not found");
