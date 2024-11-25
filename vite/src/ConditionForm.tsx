@@ -19,18 +19,22 @@ interface Condition {
     coding: {
       system: string;
       code: string;
+      display: string;
     }[];
   };
   category: {
     coding: {
       system: string;
       code: string;
+      display: string;
     }[];
+    text: string;
   }[];
   severity: {
     coding: {
       system: string;
       code: string;
+      display: string;
     }[];
   };
   subject: {
@@ -55,10 +59,13 @@ const ConditionForm: React.FC = () => {
   const [jsonResult, setJsonResult] = useState<Condition | null>(null);
 
   const [code, setCode] = useState<string>("");
+  code;
   const [clinicalStatus, setClinicalStatus] = useState<string>("");
   const [category, setCategory] = useState<string>("");
+  category;
   const [severity, setSeverity] = useState<string>("");
   const [subject, setSubject] = useState<string>("");
+  subject;
   const [onsetDateTime, setOnsetDateTime] = useState<string>("");
   const [recordedDate, setRecordedDate] = useState<string>("");
   const [errors] = useState<Errors>({});
@@ -84,15 +91,15 @@ const ConditionForm: React.FC = () => {
       id: `${generatedId}`,
       meta: {
         profile: [
-          "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC6-ConditionFoundInEmergencyDepartment",
+          "https://hapi.fhir.tw/fhir/StructureDefinition/Condition-medical-history",
         ],
       },
       code: {
         coding: [
           {
             system: "http://snomed.info/sct",
-            code: code,
-            display: "Condition code",
+            code: "84229001",
+            display: "Fatigue",
           },
         ],
       },
@@ -101,6 +108,7 @@ const ConditionForm: React.FC = () => {
           {
             system: "http://terminology.hl7.org/CodeSystem/condition-clinical",
             code: clinicalStatus,
+            display: "Active",
           },
         ],
       },
@@ -108,23 +116,25 @@ const ConditionForm: React.FC = () => {
         {
           coding: [
             {
-              system:
-                "http://terminology.hl7.org/CodeSystem/condition-category",
-              code: category,
+              system: "http://loinc.org",
+              code: "10164-2",
+              display: "History of Present illness Narrative",
             },
           ],
+          text: "Problem List Item",
         },
       ],
       severity: {
         coding: [
           {
             system: "http://snomed.info/sct",
-            code: severity,
+            code: "255604002",
+            display: "Mild",
           },
         ],
       },
       subject: {
-        reference: subject,
+        reference: "Patient/308",
       },
       onsetDateTime: onsetDateTime,
       recordedDate: recordedDate,
@@ -147,7 +157,7 @@ const ConditionForm: React.FC = () => {
           Condition Form
         </h2>
         <form onSubmit={handleSave}>
-          <div className="mb-4">
+          {/* <div className="mb-4">
             <label className="block text-gray-700 font-semibold mb-2">
               Code:
             </label>
@@ -164,7 +174,7 @@ const ConditionForm: React.FC = () => {
             {errors.code && (
               <span className="text-red-500 text-sm">{errors.code}</span>
             )}
-          </div>
+          </div> */}
 
           <div className="mb-4">
             <label className="block text-gray-700 font-semibold mb-2">
@@ -197,25 +207,6 @@ const ConditionForm: React.FC = () => {
 
           <div className="mb-4">
             <label className="block text-gray-700 font-semibold mb-2">
-              Category:
-            </label>
-            <input
-              type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.category
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.category && (
-              <span className="text-red-500 text-sm">{errors.category}</span>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
               Severity:
             </label>
             <select
@@ -239,29 +230,10 @@ const ConditionForm: React.FC = () => {
 
           <div className="mb-4">
             <label className="block text-gray-700 font-semibold mb-2">
-              Subject:
-            </label>
-            <input
-              type="text"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.subject
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.subject && (
-              <span className="text-red-500 text-sm">{errors.subject}</span>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
               Onset Date Time:
             </label>
             <input
-              type="datetime-local"
+              type="date"
               value={onsetDateTime}
               onChange={(e) => setOnsetDateTime(e.target.value)}
               className={`w-full px-4 py-2 border rounded-md focus:outline-none ${

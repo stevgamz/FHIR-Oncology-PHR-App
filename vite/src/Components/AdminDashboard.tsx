@@ -9,6 +9,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { readPatient } from "../FhirService";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ const AdminDashboard = () => {
           const userData = change.doc.data();
           setNotifications((prev) => [
             ...prev,
-            `New user registered: ${userData?.name?.[1]?.given?.[0]} ${userData?.name?.[0]?.family}`,
+            `New user registered: ${userData?.name?.[0]?.given?.[0]} ${userData?.name?.[0]?.family}`,
           ]);
           setTimeout(() => {
             setNotifications((prev) =>
@@ -101,7 +102,13 @@ const AdminDashboard = () => {
       try {
         const detailsDoc = await getDoc(doc(db, "HashMappings", fhirId));
         const detailsData = detailsDoc.data();
-        setSelectUser({ ...selectUser, details: detailsData });
+        const hashMapping = detailsData ? detailsData.hashMapping : null;
+
+        const unhashedPatient = await readPatient(fhirId, hashMapping);
+        console.log(unhashedPatient, "Unhashed Patient: ");
+
+        setSelectUser({ ...selectUser, details: unhashedPatient, fhirId });
+
         setShowTokenModal(false);
         setDetailError(null);
         setAdminToken("");
@@ -365,11 +372,11 @@ const AdminDashboard = () => {
               }}
             >
               <p>
-                <strong>Name:</strong> {selectUser.name?.[1]?.given?.[0]}{" "}
+                <strong>Name:</strong> {selectUser.name?.[0]?.given?.[0]}{" "}
                 {selectUser.name?.[0]?.family}
               </p>
               <p>
-                <strong>Given:</strong> {selectUser.name?.[1]?.given?.[0]}
+                <strong>Given:</strong> {selectUser.name?.[0]?.given?.[0]}
               </p>
               <p>
                 <strong>Family:</strong> {selectUser.name?.[0]?.family}

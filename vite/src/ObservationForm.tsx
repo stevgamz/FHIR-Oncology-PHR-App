@@ -1,5 +1,5 @@
 import React, { useState, FormEvent } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { createObservation } from "./FhirService";
 import "./index.css";
 import { useEffect } from "react";
@@ -20,6 +20,7 @@ interface PatientDataProps {
     system: string;
     value: string;
   }>;
+  token?: string;
   observations?: Observation;
 }
 
@@ -58,6 +59,7 @@ const ObservationForm: React.FC = () => {
   const [observations, setObservations] = useState<PatientDataProps | null>(
     null
   );
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (location.state?.patientData) {
@@ -420,6 +422,7 @@ const ObservationForm: React.FC = () => {
         const phrId = phrDoc.data()?.phrId;
         console.log("PHR ID:", phrId);
         const userDocRef = doc(db, "Patient", phrId);
+        // console.log("User Doc Ref:", userDocRef);
 
         if (!phrId) {
           console.error("PHR ID not found");
@@ -427,18 +430,43 @@ const ObservationForm: React.FC = () => {
         } else {
           if (phrDoc.data()?.fhirId) {
             await setDoc(userDocRef, {
-              ...patientData,
-              observations: newObservations,
-            });
-
-            const newPatientDatawithObservations: PatientDataProps = {
-              ...patientData,
-              id: patientData?.id ?? "",
+              fhirId: patientData?.id,
               name: [
                 {
                   use: "official",
-                  given: [patientData?.name?.[0]?.given?.[0] ?? ""],
                   family: patientData?.name?.[0]?.family ?? "",
+                  given: [patientData?.name?.[0]?.given?.[0] ?? ""],
+                },
+              ],
+              telecom: [
+                {
+                  system: "phone",
+                  value: patientData?.telecom?.[0].value ?? "",
+                },
+                {
+                  system: "email",
+                  value: patientData?.telecom?.[1].value ?? "",
+                },
+              ],
+              birthDate: patientData?.birthDate ?? "",
+              gender: patientData?.gender ?? "",
+              observations: newObservations,
+            });
+
+            // useEffect(() => {
+            //   if (patientData) {
+            //     setPatientData(patientData);
+            //   }
+            // }, [patientData]);
+
+            const newPatientDatawithObservations: PatientDataProps = {
+              id: patientData?.id ?? "",
+              // fhirId: patientData?.id ?? "",
+              name: [
+                {
+                  use: "official",
+                  family: patientData?.name?.[0]?.family ?? "",
+                  given: [patientData?.name?.[0]?.given?.[0] ?? ""],
                 },
               ],
               birthDate: patientData?.birthDate ?? "",
@@ -461,6 +489,16 @@ const ObservationForm: React.FC = () => {
             console.log("Observations:", newObservations);
             console.log("Patient data:", newPatientDatawithObservations);
 
+            // await setDoc(userDocRef, {
+            //   ...newPatientDatawithObservations,
+            // });
+
+            // if (phrId) {
+            //   await setDoc(userDocRef, {
+            //     ...newPatientDatawithObservations,
+            //   });
+            // }
+
             try {
               const observations = [
                 createBodyWeightObservation(),
@@ -475,12 +513,12 @@ const ObservationForm: React.FC = () => {
               );
 
               setJsonResult(results);
-              // navigate("/profile", {
-              //   state: {
-              //     patientData: patientData,
-              //     observations: results,
-              //   },
-              // });
+              navigate("/phr", {
+                state: {
+                  patientData: patientData,
+                  observations: results,
+                },
+              });
             } catch (error) {
               console.error("Error saving observations:", error);
               setErrors({ submit: "Failed to save observations" });

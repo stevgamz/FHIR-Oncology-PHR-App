@@ -5,9 +5,6 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./Firebase";
 import { doc, getDoc } from "firebase/firestore";
 import "./index.css";
-import Pinjol from "./assets/pinjolstip.jpeg";
-import ObservationForm from "./ObservationForm";
-import ConditionForm from "./ConditionForm";
 
 // interface PatientDataProps {
 //   name: Array<{
@@ -59,7 +56,7 @@ const HomePage = () => {
                 email: userData?.telecom?.[1]?.value,
                 name: {
                   use: "official",
-                  given: [userData?.name?.[1]?.given?.[0]],
+                  given: [userData?.name?.[0]?.given?.[0]],
                   family: userData?.name?.[0]?.family,
                 },
               };
@@ -105,8 +102,8 @@ const HomePage = () => {
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between px-6">
           <div className="md:w-1/2 mb-6 md:mb-0 flex justify-center">
             <img
-              // src="https://placehold.co/400x400"
-              src={Pinjol}
+              src="https://placehold.co/400x400"
+              // src={Pinjol}
               alt="Doctor with arms crossed"
               className="rounded-lg shadow-md"
               style={{
@@ -132,8 +129,8 @@ const HomePage = () => {
           </div>
           <div className="md:w-1/2 mt-6 md:mt-0 flex justify-center">
             <img
-              // src="https://placehold.co/400x400"
-              src={Pinjol}
+              src="https://placehold.co/400x400"
+              // src={Pinjol}
               alt="Doctor holding a stethoscope"
               className="rounded-lg shadow-md"
               style={{ height: "400px", width: "400px", objectFit: "cover" }}
@@ -152,7 +149,7 @@ const HomePage = () => {
           </div>
           <div className="flex items-center space-x-2 mb-4">
             <i className="fas fa-file-alt text-teal-600 text-2xl"></i>
-            <a href="/phr/observation" className="text-teal-600 text-lg">
+            <a href="/phr/#" className="text-teal-600 text-lg">
               Observation Form
             </a>
           </div>

@@ -4,7 +4,7 @@ import { doc, setDoc, getDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
 import GoogleButton from "react-google-button";
 import "react-toastify/dist/ReactToastify.css";
-import Pinjol from "../assets/pinjolstip.jpeg";
+// import Pinjol from "../assets/pinjolstip.jpeg";
 import bg from "../assets/bg-phr.png";
 import { useNavigate } from "react-router-dom";
 
@@ -88,8 +88,6 @@ const Login = () => {
                 name: [
                   {
                     family: user.displayName?.split(" ")[1],
-                  },
-                  {
                     given: [user.displayName?.split(" ")[0]],
                   },
                 ],
@@ -170,8 +168,8 @@ const Login = () => {
         }}
       >
         <img
-          // src="https://placehold.co/400x300"
-          src={Pinjol}
+          src="https://placehold.co/400x300"
+          // src={Pinjol}
           alt="PHR logo"
           style={{
             width: "100%",

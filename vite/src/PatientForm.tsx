@@ -85,8 +85,8 @@ interface PatientErrors {
 interface PatientDataProps {
   id: string;
   name?: Array<{
-    given: string;
     family: string;
+    given: Array<string>;
   }>;
   gender: string;
   birthDate: string;
@@ -127,7 +127,7 @@ const PatientForm: React.FC = () => {
             const googlePatient = {
               email: userData?.telecom?.[0]?.value,
               name: {
-                given: [userData?.name?.[1]?.given?.[0]],
+                given: [userData?.name?.[0]?.given?.[0]],
                 family: userData?.name?.[0]?.family,
               },
             };
@@ -303,7 +303,7 @@ const PatientForm: React.FC = () => {
             });
             await setDoc(userDocRef, {
               fhirId: generatedId,
-              name: [{ family: family }, { given: [name] }],
+              name: [{ family: family, given: [name] }],
               gender: gender,
               birthDate: birthDate,
               telecom: [
@@ -408,9 +408,12 @@ const PatientForm: React.FC = () => {
 
             const patientDataToPass: PatientDataProps = {
               id: savedPatient.id,
+              // id: phrDoc.data()?.phrId,
               name: [
-                savedPatient.name?.[0]?.given?.[0] || "",
-                savedPatient.name?.[0]?.family || "",
+                {
+                  family: savedPatient.name?.[0]?.family || "",
+                  given: [savedPatient.name?.[0]?.given?.[0] || ""],
+                },
               ],
               birthDate: savedPatient.birthDate,
               gender: savedPatient.gender,
@@ -435,7 +438,7 @@ const PatientForm: React.FC = () => {
             // Update/Edit data pasien yang sudah ada
             await setDoc(userDocRef, {
               fhirId: phrDoc.data()?.fhirId,
-              name: [{ family: family }, { given: [name] }],
+              name: [{ family: family, given: [name] }],
               gender: gender,
               birthDate: birthDate,
               telecom: [
@@ -541,9 +544,12 @@ const PatientForm: React.FC = () => {
 
             const patientDataToPass: PatientDataProps = {
               id: savedPatient.id,
+              // id: phrDoc.data()?.phrId,
               name: [
-                savedPatient.name?.[0]?.given?.[0] || "",
-                savedPatient.name?.[0]?.family || "",
+                {
+                  family: savedPatient.name?.[0]?.family || "",
+                  given: [savedPatient.name?.[0]?.given?.[0] || ""],
+                },
               ],
               birthDate: savedPatient.birthDate,
               gender: savedPatient.gender,
@@ -559,12 +565,12 @@ const PatientForm: React.FC = () => {
               ],
             };
 
-            // navigate("/phr/observation", {
-            //   state: {
-            //     patientData: patientDataToPass,
-            //   },
-            // });
-            navigate("/phr");
+            navigate("/phr/observation", {
+              state: {
+                patientData: patientDataToPass,
+              },
+            });
+            // navigate("/phr");
           }
         }
       });

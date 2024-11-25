@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { auth, db } from "./Firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import "./index.css";
 import Footer from "./Footer";
@@ -18,7 +18,7 @@ const fetchUserDetails = async (uid: string) => {
       console.log("userData", userData);
 
       return {
-        given: userData?.name?.[1]?.given?.[0] || "",
+        given: userData?.name?.[0]?.given?.[0] || "",
         family: userData?.name?.[0]?.family || "",
         birthDate: userData?.birthDate,
         gender: userData?.gender,
@@ -285,7 +285,15 @@ const Profile: React.FC = () => {
               </button>
             </>
           ) : (
-            <h2>Loading...</h2>
+            <>
+              <h2>Loading...</h2>
+              <button
+                onClick={handleSignOut}
+                className="flex mx-auto mt-4 bg-red-600 text-white px-4 py-2 rounded"
+              >
+                Sign Out
+              </button>
+            </>
           )}
         </section>
       </main>
