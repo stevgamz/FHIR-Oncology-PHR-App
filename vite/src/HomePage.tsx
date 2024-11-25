@@ -6,6 +6,8 @@ import { auth, db } from "./Firebase";
 import { doc, getDoc } from "firebase/firestore";
 import "./index.css";
 import Pinjol from "./assets/pinjolstip.jpeg";
+import ObservationForm from "./ObservationForm";
+import ConditionForm from "./ConditionForm";
 
 // interface PatientDataProps {
 //   name: Array<{
@@ -140,14 +142,14 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="bg-white py-12">
+      {/* <section className="bg-white py-12">
         <div className="container mx-auto flex flex-wrap justify-center space-x-4 px-6">
-          {/* <div className="flex items-center space-x-2 mb-4">
+          <div className="flex items-center space-x-2 mb-4">
             <i className="fas fa-file-alt text-teal-600 text-2xl"></i>
             <a href="#" className="text-teal-600 text-lg">
               Patient Form
             </a>
-          </div> */}
+          </div>
           <div className="flex items-center space-x-2 mb-4">
             <i className="fas fa-file-alt text-teal-600 text-2xl"></i>
             <a href="/phr/observation" className="text-teal-600 text-lg">
@@ -161,7 +163,27 @@ const HomePage = () => {
             </a>
           </div>
         </div>
+      </section> */}
+
+      <section className="bg-blue-50 py-16">
+        <div className="container mx-auto flex justify-center space-x-6">
+          <a
+            href="/phr/observation"
+            className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-lg transition"
+          >
+            <p className="text-teal-500 font-bold">Observation Form</p>
+            <i className="fas fa-arrow-right text-teal-500 mt-2"></i>
+          </a>
+          <a
+            href="/phr/condition"
+            className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-lg transition"
+          >
+            <p className="text-teal-500 font-bold">Condition Form</p>
+            <i className="fas fa-arrow-right text-teal-500 mt-2"></i>
+          </a>
+        </div>
       </section>
+
       {/* FOOTER */}
       <Footer />
     </div>
