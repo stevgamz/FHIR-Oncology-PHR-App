@@ -29,7 +29,7 @@ function Navbar() {
               Medical Form
             </a> */}
             <a
-              href="/Profile"
+              href="/profile"
               className="text-gray-700 hover:text-teal-600 font-bold"
             >
               Profile

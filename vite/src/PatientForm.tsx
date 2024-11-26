@@ -1,12 +1,11 @@
 import React, { useState, useEffect, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { createPatient } from "./FhirService";
-import "./index.css";
-// import CryptoJS from "crypto-js";
-import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./Firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { createPatient, readPatient } from "./FhirService";
 import CryptoJS from "crypto-js";
+import "./index.css";
 
 interface Patient {
   telecom: Array<{
@@ -82,19 +81,19 @@ interface PatientErrors {
   patientGuardianPhone?: string;
 }
 
-interface PatientDataProps {
-  id: string;
-  name?: Array<{
-    family: string;
-    given: Array<string>;
-  }>;
-  gender: string;
-  birthDate: string;
-  telecom?: Array<{
-    system: string;
-    value: string;
-  }>;
-}
+// interface PatientDataProps {
+//   id: string;
+//   name?: Array<{
+//     family: string;
+//     given: Array<string>;
+//   }>;
+//   gender: string;
+//   birthDate: string;
+//   telecom?: Array<{
+//     system: string;
+//     value: string;
+//   }>;
+// }
 
 interface HashMapping {
   names: {
@@ -111,34 +110,42 @@ interface PatientToken {
 }
 
 const PatientForm: React.FC = () => {
-  const userData = async () => {
+  const fetchPatientData = async () => {
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const phrDoc = await getDoc(doc(db, "PHR", user.uid));
           const phrId = phrDoc.data()?.phrId;
-          if (!phrId) {
-            console.error("PHR ID not found");
-            return;
-          }
-          const userDoc = await getDoc(doc(db, "Patient", phrId));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const googlePatient = {
-              email: userData?.telecom?.[0]?.value,
-              name: {
-                given: [userData?.name?.[0]?.given?.[0]],
-                family: userData?.name?.[0]?.family,
-              },
-            };
+          if (phrId) {
+            const PatientDoc = await getDoc(doc(db, "Patient", phrId));
+            const fhirId = PatientDoc.data()?.fhirId;
 
-            setName(googlePatient?.name?.given?.[0] || "");
-            setFamily(googlePatient?.name?.family || "");
-            setEmail(googlePatient?.email || "");
-
-            console.log(googlePatient, "Patient");
+            let patients;
+            if (fhirId) {
+              const mappingDoc = await getDoc(doc(db, "HashMappings", fhirId));
+              const storedMapping = mappingDoc.data()?.mapping;
+              patients = await readPatient(fhirId, storedMapping);
+            } else {
+              patients = PatientDoc.data();
+            }
+            setName(patients.name[0].given[0]);
+            setFamily(patients.name[0].family);
+            setGender(patients.gender);
+            setPhone(
+              patients.telecom.find(
+                (t: { system: string }) => t.system === "phone"
+              )?.value || ""
+            );
+            setEmail(
+              patients.telecom.find(
+                (t: { system: string }) => t.system === "email"
+              )?.value || ""
+            );
+            setBirthDate(
+              new Date(patients.birthDate).toISOString().split("T")[0]
+            );
           } else {
-            console.error("User does not exist in the database");
+            console.error("PHR ID does not exist in the database");
           }
         } catch (error) {
           console.error("Error fetching data", error);
@@ -213,7 +220,7 @@ const PatientForm: React.FC = () => {
 
   useEffect(() => {
     if (patient) {
-      setName(patient?.name?.[1]?.given?.[0] || "");
+      setName(patient?.name?.[0]?.given?.[0] || "");
       setFamily(patient?.name?.[0]?.family || "");
       setGender(patient?.gender || "");
       setBirthDate(patient?.birthDate || "");
@@ -230,7 +237,7 @@ const PatientForm: React.FC = () => {
       // setCountry(patient?.address?.[0]?.country || "");
       // setManagingOrganization(patient?.managingOrganization?.reference || "");
     }
-    userData();
+    fetchPatientData();
   }, [patient]);
 
   const handleSave = async (e: FormEvent) => {
@@ -282,106 +289,90 @@ const PatientForm: React.FC = () => {
       },
     };
 
+    const patientStructure: Patient = {
+      resourceType: "Patient",
+      meta: {
+        profile: [
+          "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
+        ],
+      },
+      text: {
+        status: "generated",
+        div: `<div xmlns="http://www.w3.org/1999/xhtml">
+          Patient: ${CryptoJS.SHA256(name).toString() ?? ""} ${
+          CryptoJS.SHA256(family).toString() ?? ""
+        }
+          Gender: ${gender ?? ""}
+          DOB: ${birthDate ?? ""}
+        </div>`,
+      },
+      identifier: [
+        {
+          use: "official",
+          type: {
+            coding: [
+              {
+                system: "http://terminology.hl7.org/CodeSystem/v2-0203",
+                code: "MR",
+                display: "Medical record number",
+              },
+            ],
+          },
+          system: "http://hospital.smarthealth.org/identifiers/patients",
+          value: "12345",
+        },
+      ],
+      active: true,
+      name: [
+        {
+          use: "official",
+          family: family,
+          given: [name],
+        },
+      ],
+      gender: gender,
+      birthDate: birthDate,
+      communication: [
+        {
+          language: {
+            coding: [
+              {
+                system: "urn:ietf:bcp:47",
+                code: "zh-TW",
+                display: "Chinese (Taiwan)",
+              },
+            ],
+          },
+        },
+      ],
+      managingOrganization: {
+        reference: "Organization/org-hosp-example",
+      },
+      telecom: [
+        {
+          system: "phone",
+          value: phone,
+        },
+        {
+          system: "email",
+          value: email,
+        },
+      ],
+    };
+
     try {
       onAuthStateChanged(auth, async (user) => {
         if (user) {
           const phrDocRef = doc(db, "PHR", user.uid);
           const phrDoc = await getDoc(phrDocRef);
           const phrId = phrDoc.data()?.phrId;
-          if (!phrId) {
-            console.error("PHR ID not found");
-            return;
-          }
-          const userDocRef = doc(db, "Patient", phrId);
+          phrId ?? console.error("PHR ID not found");
+          const patientDocRef = doc(db, "Patient", phrId);
 
           // Pembuatan FHIR ID baru
           if (!phrDoc.data()?.fhirId) {
-            await setDoc(phrDocRef, {
-              googleId: user.uid,
-              phrId: phrId,
-              fhirId: generatedId,
-            });
-            await setDoc(userDocRef, {
-              fhirId: generatedId,
-              name: [{ family: family, given: [name] }],
-              gender: gender,
-              birthDate: birthDate,
-              telecom: [
-                { system: "phone", value: phone },
-                { system: "email", value: email },
-              ],
-            });
-
-            const newPatient: Patient = {
-              resourceType: "Patient",
-              id: `${generatedId}`,
-              meta: {
-                profile: [
-                  "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
-                ],
-              },
-              text: {
-                status: "generated",
-                div: `<div xmlns="http://www.w3.org/1999/xhtml">
-                  Patient: ${name ?? ""} ${family ?? ""}
-                  Gender: ${gender ?? ""}
-                  DOB: ${birthDate ?? ""}
-                </div>`,
-              },
-              identifier: [
-                {
-                  use: "official",
-                  type: {
-                    coding: [
-                      {
-                        system: "http://terminology.hl7.org/CodeSystem/v2-0203",
-                        code: "MR",
-                        display: "Medical record number",
-                      },
-                    ],
-                  },
-                  system:
-                    "http://hospital.smarthealth.org/identifiers/patients",
-                  value: "12345",
-                },
-              ],
-              active: true,
-              name: [
-                {
-                  use: "official",
-                  family: family,
-                  given: [name],
-                },
-              ],
-              gender: gender,
-              birthDate: birthDate,
-              communication: [
-                {
-                  language: {
-                    coding: [
-                      {
-                        system: "urn:ietf:bcp:47",
-                        code: "zh-TW",
-                        display: "Chinese (Taiwan)",
-                      },
-                    ],
-                  },
-                },
-              ],
-              managingOrganization: {
-                reference: "Organization/org-hosp-example",
-              },
-              telecom: [
-                {
-                  system: "phone",
-                  value: phone,
-                },
-                {
-                  system: "email",
-                  value: email,
-                },
-              ],
-            };
+            const newPatient: Patient = patientStructure;
+            newPatient.id = generatedId;
 
             const newToken = generateRandomToken();
             setPatientToken(newToken);
@@ -406,9 +397,36 @@ const PatientForm: React.FC = () => {
             setPatient(encryptedPatient.patient);
             setJsonResult(encryptedPatient.patient);
 
-            const patientDataToPass: PatientDataProps = {
-              id: savedPatient.id,
-              // id: phrDoc.data()?.phrId,
+            // const patientDataToPass: PatientDataProps = {
+            //   id: savedPatient.id,
+            //   name: [
+            //     {
+            //       family: savedPatient.name?.[0]?.family || "",
+            //       given: [savedPatient.name?.[0]?.given?.[0] || ""],
+            //     },
+            //   ],
+            //   birthDate: savedPatient.birthDate,
+            //   gender: savedPatient.gender,
+            //   telecom: [
+            //     {
+            //       system: savedPatient.telecom?.[0]?.system || "",
+            //       value: savedPatient.telecom?.[0]?.value || "",
+            //     },
+            //     {
+            //       system: savedPatient.telecom?.[1]?.system || "",
+            //       value: savedPatient.telecom?.[1]?.value || "",
+            //     },
+            //   ],
+            // };
+
+            await setDoc(phrDocRef, {
+              googleId: user.uid,
+              phrId: phrId,
+              fhirId: generatedId,
+            });
+
+            await setDoc(patientDocRef, {
+              fhirId: savedPatient.id,
               name: [
                 {
                   family: savedPatient.name?.[0]?.family || "",
@@ -427,103 +445,25 @@ const PatientForm: React.FC = () => {
                   value: savedPatient.telecom?.[1]?.value || "",
                 },
               ],
-            };
-
-            navigate("/phr/observation", {
-              state: {
-                patientData: patientDataToPass,
-              },
             });
+
+            // navigate("/phr/observation", {
+            //   state: {
+            //     patientData: patientDataToPass,
+            //   },
+            // });
+            navigate("/phr");
           } else {
             // Update/Edit data pasien yang sudah ada
-            await setDoc(userDocRef, {
-              fhirId: phrDoc.data()?.fhirId,
-              name: [{ family: family, given: [name] }],
-              gender: gender,
-              birthDate: birthDate,
-              telecom: [
-                { system: "phone", value: phone },
-                { system: "email", value: email },
-              ],
-            });
-
-            const updatePatient: Patient = {
-              resourceType: "Patient",
-              id: `${phrDoc.data()?.fhirId}`,
-              meta: {
-                profile: [
-                  "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
-                ],
-              },
-              text: {
-                status: "generated",
-                div: `<div xmlns="http://www.w3.org/1999/xhtml">
-                  Patient: ${name ?? ""} ${family ?? ""}
-                  Gender: ${gender ?? ""}
-                  DOB: ${birthDate ?? ""}
-                </div>`,
-              },
-              identifier: [
-                {
-                  use: "official",
-                  type: {
-                    coding: [
-                      {
-                        system: "http://terminology.hl7.org/CodeSystem/v2-0203",
-                        code: "MR",
-                        display: "Medical record number",
-                      },
-                    ],
-                  },
-                  system:
-                    "http://hospital.smarthealth.org/identifiers/patients",
-                  value: "12345",
-                },
-              ],
-              active: true,
-              name: [
-                {
-                  use: "official",
-                  family: family,
-                  given: [name],
-                },
-              ],
-              gender: gender,
-              birthDate: birthDate,
-              communication: [
-                {
-                  language: {
-                    coding: [
-                      {
-                        system: "urn:ietf:bcp:47",
-                        code: "zh-TW",
-                        display: "Chinese (Taiwan)",
-                      },
-                    ],
-                  },
-                },
-              ],
-              managingOrganization: {
-                reference: "Organization/org-hosp-example",
-              },
-              telecom: [
-                {
-                  system: "phone",
-                  value: phone,
-                },
-                {
-                  system: "email",
-                  value: email,
-                },
-              ],
-            };
+            const newPatient: Patient = patientStructure;
+            newPatient.id = phrDoc.data()?.fhirId;
 
             const newToken = generateRandomToken();
             setPatientToken(newToken);
             console.log(newToken);
 
             const { patient: savedPatient, hashMapping } = await createPatient(
-              updatePatient,
+              newPatient,
               true
             );
             await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
@@ -537,14 +477,36 @@ const PatientForm: React.FC = () => {
               });
             }
 
-            const encryptedPatient = await createPatient(updatePatient, false);
+            // const encryptedPatient = await createPatient(updatePatient, true);
+            const encryptedPatient = await createPatient(newPatient, true);
 
             setPatient(encryptedPatient.patient);
             setJsonResult(encryptedPatient.patient);
 
-            const patientDataToPass: PatientDataProps = {
-              id: savedPatient.id,
-              // id: phrDoc.data()?.phrId,
+            // const patientDataToPass: PatientDataProps = {
+            //   id: savedPatient.id,
+            //   name: [
+            //     {
+            //       family: savedPatient.name?.[0]?.family || "",
+            //       given: [savedPatient.name?.[0]?.given?.[0] || ""],
+            //     },
+            //   ],
+            //   birthDate: savedPatient.birthDate,
+            //   gender: savedPatient.gender,
+            //   telecom: [
+            //     {
+            //       system: savedPatient.telecom?.[0]?.system || "",
+            //       value: savedPatient.telecom?.[0]?.value || "",
+            //     },
+            //     {
+            //       system: savedPatient.telecom?.[1]?.system || "",
+            //       value: savedPatient.telecom?.[1]?.value || "",
+            //     },
+            //   ],
+            // };
+
+            await setDoc(patientDocRef, {
+              fhirId: savedPatient.id,
               name: [
                 {
                   family: savedPatient.name?.[0]?.family || "",
@@ -563,14 +525,14 @@ const PatientForm: React.FC = () => {
                   value: savedPatient.telecom?.[1]?.value || "",
                 },
               ],
-            };
-
-            navigate("/phr/observation", {
-              state: {
-                patientData: patientDataToPass,
-              },
             });
-            // navigate("/phr");
+
+            // navigate("/phr/observation", {
+            //   state: {
+            //     patientData: patientDataToPass,
+            //   },
+            // });
+            navigate("/phr");
           }
         }
       });
@@ -681,7 +643,9 @@ const PatientForm: React.FC = () => {
   return (
     <div className="bg-gradient-to-r from-green-100 to-blue-100 min-h-screen flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">Patient Form</h2>
+        <h2 className="text-2xl font-bold mb-6 text-gray-800">
+          Patient Details
+        </h2>
         <form onSubmit={handleSave}>
           <div className="mb-4">
             <label className="block text-gray-700 font-semibold mb-2">

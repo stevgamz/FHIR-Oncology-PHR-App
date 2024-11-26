@@ -1,11 +1,10 @@
-import React, { useState, FormEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { createObservation } from "./FhirService";
-import "./index.css";
-import { useEffect } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import React, { useState, FormEvent, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { auth, db } from "./Firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { createObservation, readPatient } from "./FhirService";
+import "./index.css";
 
 interface PatientDataProps {
   id: string;
@@ -42,7 +41,6 @@ interface Observation {
 }
 
 const ObservationForm: React.FC = () => {
-  const location = useLocation();
   const [patientData, setPatientData] = useState<PatientDataProps | null>(null);
   const [vitalSignValues, setVitalSignValues] = useState<VitalSignValues>({
     bodyWeight: "",
@@ -62,13 +60,29 @@ const ObservationForm: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (location.state?.patientData) {
-      setPatientData(location.state.patientData);
-      console.log("Patient data received:", location.state.patientData);
-    } else {
-      console.error("No patient data received");
-    }
-  }, [location.state]);
+    const fetchData = async () => {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+          const phrId = phrDoc.data()?.phrId;
+          if (phrId) {
+            const patientDoc = await getDoc(doc(db, "Patient", phrId));
+            const fhirId = patientDoc.data()?.fhirId;
+
+            const mappingDoc = await getDoc(doc(db, "Patient", fhirId));
+            const storedMapping = mappingDoc.data()?.mapping;
+
+            const patient = await readPatient(fhirId, storedMapping);
+            setPatientData(patient);
+            console.log("Patient data:", patient);
+          } else {
+            console.error("PHR ID does not exist in the database");
+          }
+        }
+      });
+    };
+    fetchData();
+  }, []);
 
   observations;
 
@@ -417,19 +431,17 @@ const ObservationForm: React.FC = () => {
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const phrDocRef = doc(db, "PHR", user.uid);
-        const phrDoc = await getDoc(phrDocRef);
+        const phrDoc = await getDoc(doc(db, "PHR", user.uid));
         const phrId = phrDoc.data()?.phrId;
         console.log("PHR ID:", phrId);
-        const userDocRef = doc(db, "Patient", phrId);
-        // console.log("User Doc Ref:", userDocRef);
+        const patientDocRef = doc(db, "Patient", phrId);
 
         if (!phrId) {
           console.error("PHR ID not found");
           return;
         } else {
           if (phrDoc.data()?.fhirId) {
-            await setDoc(userDocRef, {
+            await setDoc(patientDocRef, {
               fhirId: patientData?.id,
               name: [
                 {
@@ -489,12 +501,12 @@ const ObservationForm: React.FC = () => {
             console.log("Observations:", newObservations);
             console.log("Patient data:", newPatientDatawithObservations);
 
-            // await setDoc(userDocRef, {
+            // await setDoc(patientDocRef, {
             //   ...newPatientDatawithObservations,
             // });
 
             // if (phrId) {
-            //   await setDoc(userDocRef, {
+            //   await setDoc(patientDocRef, {
             //     ...newPatientDatawithObservations,
             //   });
             // }

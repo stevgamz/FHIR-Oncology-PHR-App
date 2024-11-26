@@ -1,12 +1,12 @@
-import { auth, db, provider } from "../Firebase";
-import { GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
-import GoogleButton from "react-google-button";
-import "react-toastify/dist/ReactToastify.css";
-// import Pinjol from "../assets/pinjolstip.jpeg";
-import bg from "../assets/bg-phr.png";
 import { useNavigate } from "react-router-dom";
+import GoogleButton from "react-google-button";
+import { auth, db, provider } from "../Firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+// import Pinjol from "../assets/pinjolstip.jpeg";
+import "react-toastify/dist/ReactToastify.css";
+import bg from "../assets/bg-phr.png";
 
 const GeneratePHRID = () => {
   return (
@@ -96,15 +96,15 @@ const Login = () => {
                 position: "top-center",
                 autoClose: 3000,
               });
-              navigate("/profile");
             } else {
               toast.info(`Welcome Back, ${user.displayName}!`, {
                 position: "top-center",
-                autoClose: 3000,
+                autoClose: 2000,
               });
-              navigate("/phr");
+              // navigate("/phr");
             }
           };
+          navigate("/phr");
           return createPatientDoc(user, phrId);
         }
       }
@@ -189,7 +189,13 @@ const Login = () => {
         >
           Sign in with your Google account to get started.
         </p>
-        <GoogleButton onClick={googleSignIn} />
+        <GoogleButton
+          style={{
+            fontSize: "1rem",
+            cursor: "pointer",
+          }}
+          onClick={googleSignIn}
+        />
       </div>
     </div>
   );

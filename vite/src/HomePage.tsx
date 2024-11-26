@@ -1,81 +1,70 @@
 import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import { auth, db } from "./Firebase";
+import { readPatient } from "./FhirService";
+import { doc, getDoc } from "firebase/firestore";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "./Firebase";
-import { doc, getDoc } from "firebase/firestore";
 import "./index.css";
 
-// interface PatientDataProps {
-//   name: Array<{
-//     use: string;
-//     family: string;
-//     given: Array<string>;
-//   }>;
-// }
-
 const HomePage = () => {
-  // const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  // function toggleMenu(
-  //   event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  // ): void {
-  //   setIsMenuOpen(!isMenuOpen);
-  //   throw new Error("Function not implemented.");
-  // }
-
-  // const [patient] = useState<PatientDataProps | null>(null);
-
+  const navigate = useNavigate();
   const [name, setName] = useState<string>("");
   const [family, setFamily] = useState<string>("");
-
-  // useEffect(() => {
-  //   if (patient) {
-  //     setName(patient?.name?.[0]?.given?.[0] || "");
-  //     setFamily(patient?.name?.[0]?.family || "");
-  //   }
-  //   userData();
-  // }, [patient]);
+  const [dataComplete, setDataComplete] = useState<boolean>(false);
 
   useEffect(() => {
-    const userData = async () => {
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          try {
-            const phrDoc = await getDoc(doc(db, "PHR", user.uid));
-            const phrId = phrDoc.data()?.phrId;
-            if (!phrId) {
-              console.error("PHR ID not found");
-              return;
-            }
-            const userDoc = await getDoc(doc(db, "Patient", phrId));
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              const googlePatient = {
-                resourceType: "Patient",
-                email: userData?.telecom?.[1]?.value,
-                name: {
-                  use: "official",
-                  given: [userData?.name?.[0]?.given?.[0]],
-                  family: userData?.name?.[0]?.family,
-                },
-              };
+    const fetchData = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+        const phrId = phrDoc.data()?.phrId;
+        if (phrId) {
+          const patientDoc = await getDoc(doc(db, "Patient", phrId));
+          const fhirId = patientDoc.data()?.fhirId;
 
-              setName(googlePatient?.name?.given?.[0] || "");
-              setFamily(googlePatient?.name?.family || "");
-
-              console.log(googlePatient, "Patient");
-            } else {
-              console.error("User does not exist in the database");
-            }
-          } catch (error) {
-            console.error("Error fetching data", error);
+          let patient;
+          if (fhirId) {
+            const mappingDoc = await getDoc(doc(db, "HashMappings", fhirId));
+            const storedMapping = mappingDoc.data()?.mapping;
+            patient = await readPatient(fhirId, storedMapping);
+          } else {
+            patient = patientDoc.data();
           }
+          setName(patient.name[0].given[0]);
+          setFamily(patient.name[0].family);
+
+          const isComplete =
+            patient.name[0].given[0] &&
+            patient.name[0].family &&
+            patient.gender &&
+            patient.birthDate &&
+            patient.telecom?.[0].value &&
+            patient.telecom?.[1].value;
+
+          setDataComplete(!!isComplete);
+        } else {
+          console.error("PHR ID does not exist in the database");
+          await auth.signOut();
         }
-      });
+      }
     };
-    userData();
+    fetchData();
   }, []);
+
+  const handleNavigate = (path: string) => {
+    if (dataComplete) {
+      navigate(path);
+    } else {
+      scroll(0, 0);
+      // alert("Please complete your profile first");
+      toast.error("Please complete your profile first", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    }
+  };
 
   return (
     <div>
@@ -138,39 +127,22 @@ const HomePage = () => {
           </div>
         </div>
       </section>
-
-      {/* <section className="bg-white py-12">
-        <div className="container mx-auto flex flex-wrap justify-center space-x-4 px-6">
-          <div className="flex items-center space-x-2 mb-4">
-            <i className="fas fa-file-alt text-teal-600 text-2xl"></i>
-            <a href="#" className="text-teal-600 text-lg">
-              Patient Form
-            </a>
-          </div>
-          <div className="flex items-center space-x-2 mb-4">
-            <i className="fas fa-file-alt text-teal-600 text-2xl"></i>
-            <a href="/phr/#" className="text-teal-600 text-lg">
-              Observation Form
-            </a>
-          </div>
-          <div className="flex items-center space-x-2 mb-4">
-            <i className="fas fa-file-alt text-teal-600 text-2xl"></i>
-            <a href="#" className="text-teal-600 text-lg">
-              Condition Form
-            </a>
-          </div>
-        </div>
-      </section> */}
-
       <section className="bg-blue-50 py-16">
         <div className="container mx-auto flex justify-center space-x-6">
-          <a
+          {/* <a
             href="/phr/observation"
             className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-lg transition"
           >
             <p className="text-teal-500 font-bold">Observation Form</p>
             <i className="fas fa-arrow-right text-teal-500 mt-2"></i>
-          </a>
+          </a> */}
+          <button
+            onClick={() => handleNavigate("/phr/observation")}
+            className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-lg transition"
+          >
+            <p className="text-teal-500 font-bold">Observation Form</p>
+            <i className="fas fa-arrow-right text-teal-500 mt-2"></i>
+          </button>
           <a
             href="/phr/condition"
             className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-lg transition"

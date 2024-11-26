@@ -1,93 +1,46 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { auth, db } from "./Firebase";
+import { readPatient } from "./FhirService";
 import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import "./index.css";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
-import { useNavigate } from "react-router-dom";
-
-const fetchUserDetails = async (uid: string) => {
-  try {
-    const phrDoc = await getDoc(doc(db, "PHR", uid));
-    const phrId = phrDoc.data()?.phrId;
-    const userDoc = await getDoc(doc(db, "Patient", phrId));
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      console.log("userData", userData);
-
-      return {
-        given: userData?.name?.[0]?.given?.[0] || "",
-        family: userData?.name?.[0]?.family || "",
-        birthDate: userData?.birthDate,
-        gender: userData?.gender,
-        email:
-          userData?.telecom?.find(
-            (t: { system: string }) => t.system === "email"
-          )?.value || "",
-        phone:
-          userData?.telecom?.find(
-            (t: { system: string }) => t.system === "phone"
-          )?.value || "",
-      };
-    } else {
-      console.error("User does not exist in the database");
-      return null;
-    }
-  } catch (error) {
-    console.error("Error fetching user details:", error);
-    return null;
-  }
-};
+import "./index.css";
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
-  const [userDetails, setUserDetails] = useState<any>(null);
+  const [patientDetails, setPatientDetails] = useState<any>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userDetails = await fetchUserDetails(user.uid);
+    const fetchData = async () => {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+          const phrId = phrDoc.data()?.phrId;
+          if (phrId) {
+            const patientDoc = await getDoc(doc(db, "Patient", phrId));
+            const fhirId = patientDoc.data()?.fhirId;
 
-        setUserDetails(userDetails);
-        console.log("userDetails", userDetails);
-      } else {
-        console.log("No user found");
-      }
-    });
-    return () => unsubscribe();
+            if (fhirId) {
+              const mappingDoc = await getDoc(doc(db, "HashMappings", fhirId));
+              const storedMapping = mappingDoc.data()?.mapping;
+              const patient = await readPatient(fhirId, storedMapping);
+              setPatientDetails(patient);
+            } else {
+              setPatientDetails(patientDoc.data());
+            }
+          } else {
+            console.error("PHR ID does not exist in the database");
+          }
+        } else {
+          await auth.signOut();
+        }
+      });
+    };
+    fetchData();
   }, []);
-
-  // const handleInputChange = (
-  //   e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  // ) => {
-  //   const { name, value } = e.target;
-  //   setUserDetails((prevDetails: any) => ({
-  //     ...prevDetails,
-  //     [name]: value,
-  //   }));
-  // };
-
-  // const handleSave = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   try {
-  //     const user = auth.currentUser;
-  //     if (user) {
-  //       const phrDoc = await getDoc(doc(db, "PHR", user.uid));
-  //       const phrId = phrDoc.data()?.phrId;
-  //       await setDoc(doc(db, "Users", phrId), userDetails);
-  //       toast.success("Profile updated successfully", {
-  //         position: "top-center",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error("Error updating profile:", error);
-  //     toast.error("Failed to update profile", {
-  //       position: "top-center",
-  //     });
-  //   }
-  // };
 
   const handleSignOut = async () => {
     try {
@@ -117,7 +70,7 @@ const Profile: React.FC = () => {
           </p>
         </section>
         <section className="bg-white shadow-md rounded-lg p-8">
-          {userDetails ? (
+          {patientDetails ? (
             <>
               {/* <form onSubmit={handleSave}> */}
               <div className="grid grid-cols-2 gap-4 mb-4">
@@ -126,7 +79,7 @@ const Profile: React.FC = () => {
                   <input
                     type="text"
                     name="given"
-                    value={userDetails?.given}
+                    value={patientDetails?.name[0].given[0]}
                     // onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded px-4 py-2"
                     disabled
@@ -137,7 +90,7 @@ const Profile: React.FC = () => {
                   <input
                     type="text"
                     name="family"
-                    value={userDetails.family}
+                    value={patientDetails.name[0].family}
                     // onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded px-4 py-2"
                     disabled
@@ -151,7 +104,7 @@ const Profile: React.FC = () => {
                 <input
                   type="text"
                   name="birthDate"
-                  value={userDetails.birthDate}
+                  value={patientDetails.birthDate}
                   // onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded px-4 py-2"
                   disabled
@@ -162,7 +115,7 @@ const Profile: React.FC = () => {
                 <input
                   type="text"
                   name="gender"
-                  value={userDetails.gender}
+                  value={patientDetails.gender}
                   // onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded px-4 py-2"
                   disabled
@@ -173,7 +126,11 @@ const Profile: React.FC = () => {
                 <input
                   type="email"
                   name="email"
-                  value={userDetails.email}
+                  value={
+                    patientDetails.telecom?.find(
+                      (t: { system: string }) => t.system === "email"
+                    )?.value
+                  }
                   // onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded px-4 py-2"
                   disabled
@@ -184,7 +141,11 @@ const Profile: React.FC = () => {
                 <input
                   type="phone"
                   name="phone"
-                  value={userDetails.phone}
+                  value={
+                    patientDetails.telecom?.find(
+                      (t: { system: string }) => t.system === "phone"
+                    )?.value
+                  }
                   // onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded px-4 py-2"
                   disabled
@@ -196,7 +157,7 @@ const Profile: React.FC = () => {
                     type="text"
                     name="line"
                     value={
-                      userDetails.telecom?.find(
+                      patientDetails.telecom?.find(
                         (t: { system: string }) => t.system === "address"
                       )?.value || ""
                     }
@@ -210,7 +171,7 @@ const Profile: React.FC = () => {
                     type="text"
                     name="city"
                     value={
-                      userDetails.telecom?.find(
+                      patientDetails.telecom?.find(
                         (t: { system: string }) => t.system === "city"
                       )?.value || ""
                     }
@@ -224,7 +185,7 @@ const Profile: React.FC = () => {
                     type="text"
                     name="state"
                     value={
-                      userDetails.telecom?.find(
+                      patientDetails.telecom?.find(
                         (t: { system: string }) => t.system === "state"
                       )?.value || ""
                     }
@@ -240,7 +201,7 @@ const Profile: React.FC = () => {
                     type="text"
                     name="postalCode"
                     value={
-                      userDetails.telecom?.find(
+                      patientDetails.telecom?.find(
                         (t: { system: string }) => t.system === "postalCode"
                       )?.value || ""
                     }
@@ -254,7 +215,7 @@ const Profile: React.FC = () => {
                     type="text"
                     name="country"
                     value={
-                      userDetails.telecom?.find(
+                      patientDetails.telecom?.find(
                         (t: { system: string }) => t.system === "country"
                       )?.value || ""
                     }

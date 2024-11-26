@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { readPatient } from "../FhirService";
 import { useAuth } from "./useAuth";
 import { db } from "../Firebase";
 import {
@@ -8,8 +10,6 @@ import {
   getDocs,
   onSnapshot,
 } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
-import { readPatient } from "../FhirService";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -92,34 +92,50 @@ const AdminDashboard = () => {
 
   const handleTokenSubmit = async () => {
     if (!selectUser) return;
+
     const userDoc = await getDoc(doc(db, "Patient", selectUser.id));
     const userData = userDoc.data();
-    const fhirId = userData ? userData.fhirId : null;
+    const fhirId = userData?.fhirId;
+
     const isValid = await verifyToken(fhirId);
+    !isValid && setDetailError("Invalid Token");
 
-    if (isValid) {
-      console.log(isValid);
-      try {
-        const detailsDoc = await getDoc(doc(db, "HashMappings", fhirId));
-        const detailsData = detailsDoc.data();
-        const hashMapping = detailsData ? detailsData.hashMapping : null;
+    const detailsDoc = await getDoc(doc(db, "HashMappings", fhirId));
+    const hashMapping = detailsDoc.data()?.mapping;
 
-        const unhashedPatient = await readPatient(fhirId, hashMapping);
-        console.log(unhashedPatient, "Unhashed Patient: ");
+    const unhashedPatient = await readPatient(fhirId, hashMapping);
 
-        setSelectUser({ ...selectUser, details: unhashedPatient, fhirId });
+    setSelectUser({ ...unhashedPatient, details: unhashedPatient });
+    setShowTokenModal(false);
+    setDetailError(null);
+    setAdminToken("");
 
-        setShowTokenModal(false);
-        setDetailError(null);
-        setAdminToken("");
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setDetailError("Failed");
-        setAdminToken("");
-      }
-    } else {
-      setDetailError("Invalid Token");
-    }
+    // const fhirId = userData ? userData.fhirId : null;
+    // const isValid = await verifyToken(fhirId);
+
+    // if (isValid) {
+    //   console.log(isValid);
+    //   try {
+    //     const detailsDoc = await getDoc(doc(db, "HashMappings", fhirId));
+    //     const detailsData = detailsDoc.data();
+    //     const hashMapping = detailsData ? detailsData.hashMapping : null;
+
+    //     const unhashedPatient = await readPatient(fhirId, hashMapping);
+    //     console.log(unhashedPatient, "Unhashed Patient: ");
+
+    //     setSelectUser({ ...selectUser, details: unhashedPatient });
+
+    //     setShowTokenModal(false);
+    //     setDetailError(null);
+    //     setAdminToken("");
+    //   } catch (error) {
+    //     console.error("Error fetching data:", error);
+    //     setDetailError("Failed");
+    //     setAdminToken("");
+    //   }
+    // } else {
+    //   setDetailError("Invalid Token");
+    // }
   };
 
   const handleCancel = () => {
