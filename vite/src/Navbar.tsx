@@ -14,12 +14,30 @@ function Navbar() {
           <div className="text-2xl font-bold text-teal-600">ONCOLOGY TIM</div>
           <nav className="hidden md:flex space-x-4">
             <a
-              href="/phr"
-              className="text-gray-700 hover:text-teal-600 font-bold"
+              className={`${
+                location.pathname === "/phr"
+                  ? "text-teal-600"
+                  : "hover:text-teal-600"
+              } font-bold text-gray-700 cursor-pointer`}
+              onClick={(e) => {
+                e.preventDefault();
+                location.pathname !== "/phr" && window.location.replace("/phr");
+              }}
             >
               Home
             </a>
-            <a href="#" className="text-gray-700 hover:text-teal-600 font-bold">
+            <a
+              className="text-gray-700 hover:text-teal-600 font-bold cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault();
+                const homeElement = document.getElementById("about");
+                if (homeElement) {
+                  homeElement.scrollIntoView({ behavior: "smooth" });
+                } else {
+                  window.location.href = "/phr";
+                }
+              }}
+            >
               About Us
             </a>
             {/* <a href="#" className="text-gray-700 hover:text-teal-600 font-bold">
@@ -29,8 +47,16 @@ function Navbar() {
               Medical Form
             </a> */}
             <a
-              href="/profile"
-              className="text-gray-700 hover:text-teal-600 font-bold"
+              className={`${
+                location.pathname === "/profile"
+                  ? "text-teal-600"
+                  : "hover:text-teal-600"
+              } font-bold text-gray-700 cursor-pointer`}
+              onClick={(e) => {
+                e.preventDefault();
+                location.pathname !== "/profile" &&
+                  window.location.replace("/profile");
+              }}
             >
               Profile
             </a>
@@ -46,14 +72,30 @@ function Navbar() {
           <div className="md:hidden flex justify-center text-center">
             <nav className="flex flex-col space-y-2 px-6 py-4">
               <a
-                href="/phr"
-                className="text-gray-700 hover:text-teal-600 font-bold"
+                className={`${
+                  location.pathname === "/phr"
+                    ? "text-teal-600"
+                    : "hover:text-teal-600"
+                } font-bold text-gray-700 cursor-pointer`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  location.pathname !== "/phr" &&
+                    window.location.replace("/phr");
+                }}
               >
                 Home
               </a>
               <a
-                href="#"
-                className="text-gray-700 hover:text-teal-600 font-bold"
+                className="text-gray-700 hover:text-teal-600 font-bold cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const homeElement = document.getElementById("about");
+                  if (homeElement) {
+                    homeElement.scrollIntoView({ behavior: "smooth" });
+                  } else {
+                    window.location.href = "/phr";
+                  }
+                }}
               >
                 About Us
               </a>
@@ -70,8 +112,16 @@ function Navbar() {
                 Medical Form
               </a> */}
               <a
-                href="/Profile"
-                className="text-gray-700 hover:text-teal-600 font-bold"
+                className={`${
+                  location.pathname === "/profile"
+                    ? "text-teal-600"
+                    : "hover:text-teal-600"
+                } font-bold text-gray-700 cursor-pointer`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  location.pathname !== "/profile" &&
+                    window.location.replace("/profile");
+                }}
               >
                 Profile
               </a>

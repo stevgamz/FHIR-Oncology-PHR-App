@@ -21,6 +21,14 @@ const App: React.FC = () => {
         <div className="App">
           <Routes>
             <Route path="/" element={<Login />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/registeradmin" element={<RegisterAdmin />} />
+
+            <Route
+              path="/admin/dashboard"
+              element={<PrivateRoute component={AdminDashboard} />}
+            />
+
             <Route
               path="/phr"
               element={<PrivateRoute component={HomePage} />}
@@ -29,19 +37,13 @@ const App: React.FC = () => {
               path="/profile"
               element={<PrivateRoute component={Profile} />}
             />
-            <Route path="/registeradmin" element={<RegisterAdmin />} />
-            <Route path="/admin" element={<Admin />} />
             <Route
-              path="/admin/dashboard"
-              element={<PrivateRoute component={AdminDashboard} />}
+              path="/profile/edit"
+              element={<PrivateRoute component={PatientForm} />}
             />
             <Route
               path="/phr/observation"
               element={<PrivateRoute component={ObservationForm} />}
-            />
-            <Route
-              path="/profile/edit"
-              element={<PrivateRoute component={PatientForm} />}
             />
             <Route
               path="/phr/condition"

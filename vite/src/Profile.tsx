@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { auth, db } from "./Firebase";
 import { readPatient } from "./FhirService";
 import { doc, getDoc } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+// import { onAuthStateChanged } from "firebase/auth";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
 import "./index.css";
@@ -15,29 +15,30 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          const phrDoc = await getDoc(doc(db, "PHR", user.uid));
-          const phrId = phrDoc.data()?.phrId;
-          if (phrId) {
-            const patientDoc = await getDoc(doc(db, "Patient", phrId));
-            const fhirId = patientDoc.data()?.fhirId;
+      // onAuthStateChanged(auth, async (user) => {
+      const user = auth.currentUser;
+      if (user) {
+        const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+        const phrId = phrDoc.data()?.phrId;
+        if (phrId) {
+          const patientDoc = await getDoc(doc(db, "Patient", phrId));
+          const fhirId = patientDoc.data()?.fhirId;
 
-            if (fhirId) {
-              const mappingDoc = await getDoc(doc(db, "HashMappings", fhirId));
-              const storedMapping = mappingDoc.data()?.mapping;
-              const patient = await readPatient(fhirId, storedMapping);
-              setPatientDetails(patient);
-            } else {
-              setPatientDetails(patientDoc.data());
-            }
+          if (fhirId) {
+            const mappingDoc = await getDoc(doc(db, "HashMappings", fhirId));
+            const storedMapping = mappingDoc.data()?.mapping;
+            const patient = await readPatient(fhirId, storedMapping);
+            setPatientDetails(patient);
           } else {
-            console.error("PHR ID does not exist in the database");
+            setPatientDetails(patientDoc.data());
           }
         } else {
-          await auth.signOut();
+          console.error("PHR ID does not exist in the database");
         }
-      });
+      } else {
+        await auth.signOut();
+      }
+      // });
     };
     fetchData();
   }, []);
@@ -56,7 +57,10 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="bg-gradient-to-b from-teal-100 to-white min-h-screen">
+    <div
+      className="bg-gradient-to-b from-teal-100 to-white min-h-screen"
+      id="profile"
+    >
       {/* NAVBAR */}
       <Navbar />
       <main className="container mx-auto px-4 py-8">

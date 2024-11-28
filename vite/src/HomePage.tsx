@@ -67,7 +67,7 @@ const HomePage = () => {
   };
 
   return (
-    <div>
+    <div id="home">
       {/* navbar */}
       <Navbar />
 
@@ -87,7 +87,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="bg-blue-50 py-12">
+      <section className="bg-blue-50 py-12" id="about">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between px-6">
           <div className="md:w-1/2 mb-6 md:mb-0 flex justify-center">
             <img

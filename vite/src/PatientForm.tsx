@@ -368,172 +368,228 @@ const PatientForm: React.FC = () => {
           const phrId = phrDoc.data()?.phrId;
           phrId ?? console.error("PHR ID not found");
           const patientDocRef = doc(db, "Patient", phrId);
+          const patientDoc = await getDoc(patientDocRef);
+
+          const existingObservations =
+            patientDoc.data()?.observations?.url || "";
+
+          const newPatient: Patient = patientStructure;
+          newPatient.id = phrDoc.data()?.fhirId || generatedId;
+
+          const newToken = generateRandomToken();
+          setPatientToken(newToken);
+          console.log(newToken);
+
+          const { patient: savedPatient, hashMapping } = await createPatient(
+            newPatient,
+            true
+          );
+
+          await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
+          setHashMapping(newHashMapping);
+
+          if (hashMapping) {
+            const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
+            await setDoc(mappingDocRef, {
+              mapping: hashMapping,
+              token: newToken,
+            });
+          }
+
+          const encryptedPatient = await createPatient(newPatient, true);
+          setPatient(encryptedPatient.patient);
+          setJsonResult(encryptedPatient.patient);
+
+          await setDoc(patientDocRef, {
+            fhirId: savedPatient.id,
+            name: [
+              {
+                family: savedPatient.name?.[0]?.family || "",
+                given: [savedPatient.name?.[0]?.given?.[0] || ""],
+              },
+            ],
+            birthDate: savedPatient.birthDate,
+            gender: savedPatient.gender,
+            observations: {
+              url: existingObservations || "",
+            },
+            telecom: [
+              {
+                system: savedPatient.telecom?.[0]?.system || "",
+                value: savedPatient.telecom?.[0]?.value || "",
+              },
+              {
+                system: savedPatient.telecom?.[1]?.system || "",
+                value: savedPatient.telecom?.[1]?.value || "",
+              },
+            ],
+          });
+
+          navigate("/phr");
 
           // Pembuatan FHIR ID baru
-          if (!phrDoc.data()?.fhirId) {
-            const newPatient: Patient = patientStructure;
-            newPatient.id = generatedId;
+          // if (!phrDoc.data()?.fhirId) {
+          //   const newPatient: Patient = patientStructure;
+          //   newPatient.id = generatedId;
 
-            const newToken = generateRandomToken();
-            setPatientToken(newToken);
-            console.log(newToken);
+          //   const newToken = generateRandomToken();
+          //   setPatientToken(newToken);
+          //   console.log(newToken);
 
-            const { patient: savedPatient, hashMapping } = await createPatient(
-              newPatient,
-              true
-            );
-            await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
-            setHashMapping(newHashMapping);
+          //   const { patient: savedPatient, hashMapping } = await createPatient(
+          //     newPatient,
+          //     true
+          //   );
+          //   await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
+          //   setHashMapping(newHashMapping);
 
-            if (hashMapping) {
-              const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
-              await setDoc(mappingDocRef, {
-                mapping: hashMapping,
-                token: newToken,
-              });
-            }
+          //   if (hashMapping) {
+          //     const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
+          //     await setDoc(mappingDocRef, {
+          //       mapping: hashMapping,
+          //       token: newToken,
+          //     });
+          //   }
 
-            const encryptedPatient = await createPatient(newPatient, true);
-            setPatient(encryptedPatient.patient);
-            setJsonResult(encryptedPatient.patient);
+          //   const encryptedPatient = await createPatient(newPatient, true);
+          //   setPatient(encryptedPatient.patient);
+          //   setJsonResult(encryptedPatient.patient);
 
-            // const patientDataToPass: PatientDataProps = {
-            //   id: savedPatient.id,
-            //   name: [
-            //     {
-            //       family: savedPatient.name?.[0]?.family || "",
-            //       given: [savedPatient.name?.[0]?.given?.[0] || ""],
-            //     },
-            //   ],
-            //   birthDate: savedPatient.birthDate,
-            //   gender: savedPatient.gender,
-            //   telecom: [
-            //     {
-            //       system: savedPatient.telecom?.[0]?.system || "",
-            //       value: savedPatient.telecom?.[0]?.value || "",
-            //     },
-            //     {
-            //       system: savedPatient.telecom?.[1]?.system || "",
-            //       value: savedPatient.telecom?.[1]?.value || "",
-            //     },
-            //   ],
-            // };
+          //   // const patientDataToPass: PatientDataProps = {
+          //   //   id: savedPatient.id,
+          //   //   name: [
+          //   //     {
+          //   //       family: savedPatient.name?.[0]?.family || "",
+          //   //       given: [savedPatient.name?.[0]?.given?.[0] || ""],
+          //   //     },
+          //   //   ],
+          //   //   birthDate: savedPatient.birthDate,
+          //   //   gender: savedPatient.gender,
+          //   //   telecom: [
+          //   //     {
+          //   //       system: savedPatient.telecom?.[0]?.system || "",
+          //   //       value: savedPatient.telecom?.[0]?.value || "",
+          //   //     },
+          //   //     {
+          //   //       system: savedPatient.telecom?.[1]?.system || "",
+          //   //       value: savedPatient.telecom?.[1]?.value || "",
+          //   //     },
+          //   //   ],
+          //   // };
 
-            await setDoc(phrDocRef, {
-              googleId: user.uid,
-              phrId: phrId,
-              fhirId: generatedId,
-            });
+          //   await setDoc(phrDocRef, {
+          //     googleId: user.uid,
+          //     phrId: phrId,
+          //     fhirId: generatedId,
+          //   });
 
-            await setDoc(patientDocRef, {
-              fhirId: savedPatient.id,
-              name: [
-                {
-                  family: savedPatient.name?.[0]?.family || "",
-                  given: [savedPatient.name?.[0]?.given?.[0] || ""],
-                },
-              ],
-              birthDate: savedPatient.birthDate,
-              gender: savedPatient.gender,
-              telecom: [
-                {
-                  system: savedPatient.telecom?.[0]?.system || "",
-                  value: savedPatient.telecom?.[0]?.value || "",
-                },
-                {
-                  system: savedPatient.telecom?.[1]?.system || "",
-                  value: savedPatient.telecom?.[1]?.value || "",
-                },
-              ],
-            });
+          //   await setDoc(patientDocRef, {
+          //     fhirId: savedPatient.id,
+          //     name: [
+          //       {
+          //         family: savedPatient.name?.[0]?.family || "",
+          //         given: [savedPatient.name?.[0]?.given?.[0] || ""],
+          //       },
+          //     ],
+          //     birthDate: savedPatient.birthDate,
+          //     gender: savedPatient.gender,
+          //     telecom: [
+          //       {
+          //         system: savedPatient.telecom?.[0]?.system || "",
+          //         value: savedPatient.telecom?.[0]?.value || "",
+          //       },
+          //       {
+          //         system: savedPatient.telecom?.[1]?.system || "",
+          //         value: savedPatient.telecom?.[1]?.value || "",
+          //       },
+          //     ],
+          //   });
 
-            // navigate("/phr/observation", {
-            //   state: {
-            //     patientData: patientDataToPass,
-            //   },
-            // });
-            navigate("/phr");
-          } else {
-            // Update/Edit data pasien yang sudah ada
-            const newPatient: Patient = patientStructure;
-            newPatient.id = phrDoc.data()?.fhirId;
+          //   // navigate("/phr/observation", {
+          //   //   state: {
+          //   //     patientData: patientDataToPass,
+          //   //   },
+          //   // });
+          //   navigate("/phr");
+          // } else {
+          //   // Update/Edit data pasien yang sudah ada
+          //   const newPatient = patientStructure;
+          //   newPatient.id = phrDoc.data()?.fhirId;
 
-            const newToken = generateRandomToken();
-            setPatientToken(newToken);
-            console.log(newToken);
+          //   const newToken = generateRandomToken();
+          //   setPatientToken(newToken);
+          //   console.log(newToken);
 
-            const { patient: savedPatient, hashMapping } = await createPatient(
-              newPatient,
-              true
-            );
-            await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
-            setHashMapping(newHashMapping);
+          //   const { patient: savedPatient, hashMapping } = await createPatient(
+          //     newPatient,
+          //     true
+          //   );
+          //   await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
+          //   setHashMapping(newHashMapping);
 
-            if (hashMapping) {
-              const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
-              await setDoc(mappingDocRef, {
-                mapping: hashMapping,
-                token: newToken,
-              });
-            }
+          //   if (hashMapping) {
+          //     const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
+          //     await setDoc(mappingDocRef, {
+          //       mapping: hashMapping,
+          //       token: newToken,
+          //     });
+          //   }
 
-            // const encryptedPatient = await createPatient(updatePatient, true);
-            const encryptedPatient = await createPatient(newPatient, true);
+          //   const encryptedPatient = await createPatient(newPatient, true);
+          //   setPatient(encryptedPatient.patient);
+          //   setJsonResult(encryptedPatient.patient);
 
-            setPatient(encryptedPatient.patient);
-            setJsonResult(encryptedPatient.patient);
+          //   // const patientDataToPass: PatientDataProps = {
+          //   //   id: savedPatient.id,
+          //   //   name: [
+          //   //     {
+          //   //       family: savedPatient.name?.[0]?.family || "",
+          //   //       given: [savedPatient.name?.[0]?.given?.[0] || ""],
+          //   //     },
+          //   //   ],
+          //   //   birthDate: savedPatient.birthDate,
+          //   //   gender: savedPatient.gender,
+          //   //   telecom: [
+          //   //     {
+          //   //       system: savedPatient.telecom?.[0]?.system || "",
+          //   //       value: savedPatient.telecom?.[0]?.value || "",
+          //   //     },
+          //   //     {
+          //   //       system: savedPatient.telecom?.[1]?.system || "",
+          //   //       value: savedPatient.telecom?.[1]?.value || "",
+          //   //     },
+          //   //   ],
+          //   // };
 
-            // const patientDataToPass: PatientDataProps = {
-            //   id: savedPatient.id,
-            //   name: [
-            //     {
-            //       family: savedPatient.name?.[0]?.family || "",
-            //       given: [savedPatient.name?.[0]?.given?.[0] || ""],
-            //     },
-            //   ],
-            //   birthDate: savedPatient.birthDate,
-            //   gender: savedPatient.gender,
-            //   telecom: [
-            //     {
-            //       system: savedPatient.telecom?.[0]?.system || "",
-            //       value: savedPatient.telecom?.[0]?.value || "",
-            //     },
-            //     {
-            //       system: savedPatient.telecom?.[1]?.system || "",
-            //       value: savedPatient.telecom?.[1]?.value || "",
-            //     },
-            //   ],
-            // };
+          //   await setDoc(patientDocRef, {
+          //     fhirId: savedPatient.id,
+          //     name: [
+          //       {
+          //         family: savedPatient.name?.[0]?.family || "",
+          //         given: [savedPatient.name?.[0]?.given?.[0] || ""],
+          //       },
+          //     ],
+          //     birthDate: savedPatient.birthDate,
+          //     gender: savedPatient.gender,
+          //     telecom: [
+          //       {
+          //         system: savedPatient.telecom?.[0]?.system || "",
+          //         value: savedPatient.telecom?.[0]?.value || "",
+          //       },
+          //       {
+          //         system: savedPatient.telecom?.[1]?.system || "",
+          //         value: savedPatient.telecom?.[1]?.value || "",
+          //       },
+          //     ],
+          //   });
 
-            await setDoc(patientDocRef, {
-              fhirId: savedPatient.id,
-              name: [
-                {
-                  family: savedPatient.name?.[0]?.family || "",
-                  given: [savedPatient.name?.[0]?.given?.[0] || ""],
-                },
-              ],
-              birthDate: savedPatient.birthDate,
-              gender: savedPatient.gender,
-              telecom: [
-                {
-                  system: savedPatient.telecom?.[0]?.system || "",
-                  value: savedPatient.telecom?.[0]?.value || "",
-                },
-                {
-                  system: savedPatient.telecom?.[1]?.system || "",
-                  value: savedPatient.telecom?.[1]?.value || "",
-                },
-              ],
-            });
-
-            // navigate("/phr/observation", {
-            //   state: {
-            //     patientData: patientDataToPass,
-            //   },
-            // });
-            navigate("/phr");
-          }
+          //   // navigate("/phr/observation", {
+          //   //   state: {
+          //   //     patientData: patientDataToPass,
+          //   //   },
+          //   // });
+          //   navigate("/phr");
+          // }
         }
       });
     } catch (error) {
