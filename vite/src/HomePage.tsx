@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import { auth, db } from "./Firebase";
+import { readPatient } from "./FhirService";
+import { doc, getDoc } from "firebase/firestore";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "./Firebase";
-import { doc, getDoc } from "firebase/firestore";
 import "./index.css";
 import Pinjol from "./assets/pinjolstip.jpeg";
 import ObservationForm from "./ObservationForm";
@@ -18,70 +20,65 @@ import ConditionForm from "./ConditionForm";
 // }
 
 const HomePage = () => {
-  // const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  // function toggleMenu(
-  //   event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  // ): void {
-  //   setIsMenuOpen(!isMenuOpen);
-  //   throw new Error("Function not implemented.");
-  // }
-
-  // const [patient] = useState<PatientDataProps | null>(null);
-
+  const navigate = useNavigate();
   const [name, setName] = useState<string>("");
   const [family, setFamily] = useState<string>("");
-
-  // useEffect(() => {
-  //   if (patient) {
-  //     setName(patient?.name?.[0]?.given?.[0] || "");
-  //     setFamily(patient?.name?.[0]?.family || "");
-  //   }
-  //   userData();
-  // }, [patient]);
+  const [dataComplete, setDataComplete] = useState<boolean>(false);
 
   useEffect(() => {
-    const userData = async () => {
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          try {
-            const phrDoc = await getDoc(doc(db, "PHR", user.uid));
-            const phrId = phrDoc.data()?.phrId;
-            if (!phrId) {
-              console.error("PHR ID not found");
-              return;
-            }
-            const userDoc = await getDoc(doc(db, "Patient", phrId));
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              const googlePatient = {
-                resourceType: "Patient",
-                email: userData?.telecom?.[1]?.value,
-                name: {
-                  use: "official",
-                  given: [userData?.name?.[1]?.given?.[0]],
-                  family: userData?.name?.[0]?.family,
-                },
-              };
+    const fetchData = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+        const phrId = phrDoc.data()?.phrId;
+        if (phrId) {
+          const patientDoc = await getDoc(doc(db, "Patient", phrId));
+          const fhirId = patientDoc.data()?.fhirId;
 
-              setName(googlePatient?.name?.given?.[0] || "");
-              setFamily(googlePatient?.name?.family || "");
-
-              console.log(googlePatient, "Patient");
-            } else {
-              console.error("User does not exist in the database");
-            }
-          } catch (error) {
-            console.error("Error fetching data", error);
+          let patient;
+          if (fhirId) {
+            const mappingDoc = await getDoc(doc(db, "HashMappings", fhirId));
+            const storedMapping = mappingDoc.data()?.mapping;
+            patient = await readPatient(fhirId, storedMapping);
+          } else {
+            patient = patientDoc.data();
           }
+          setName(patient.name[0].given[0]);
+          setFamily(patient.name[0].family);
+
+          const isComplete =
+            patient.name[0].given[0] &&
+            patient.name[0].family &&
+            patient.gender &&
+            patient.birthDate &&
+            patient.telecom?.[0].value &&
+            patient.telecom?.[1].value;
+
+          setDataComplete(!!isComplete);
+        } else {
+          console.error("PHR ID does not exist in the database");
+          await auth.signOut();
         }
-      });
+      }
     };
-    userData();
+    fetchData();
   }, []);
 
+  const handleNavigate = (path: string) => {
+    if (dataComplete) {
+      navigate(path);
+    } else {
+      scroll(0, 0);
+      // alert("Please complete your profile first");
+      toast.error("Please complete your profile first", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    }
+  };
+
   return (
-    <div>
+    <div id="home">
       {/* navbar */}
       <Navbar />
 
@@ -101,12 +98,12 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="bg-blue-50 py-12">
+      <section className="bg-blue-50 py-12" id="about">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between px-6">
           <div className="md:w-1/2 mb-6 md:mb-0 flex justify-center">
             <img
-              // src="https://placehold.co/400x400"
-              src={Pinjol}
+              src="https://placehold.co/400x400"
+              // src={Pinjol}
               alt="Doctor with arms crossed"
               className="rounded-lg shadow-md"
               style={{
@@ -132,8 +129,8 @@ const HomePage = () => {
           </div>
           <div className="md:w-1/2 mt-6 md:mt-0 flex justify-center">
             <img
-              // src="https://placehold.co/400x400"
-              src={Pinjol}
+              src="https://placehold.co/400x400"
+              // src={Pinjol}
               alt="Doctor holding a stethoscope"
               className="rounded-lg shadow-md"
               style={{ height: "400px", width: "400px", objectFit: "cover" }}

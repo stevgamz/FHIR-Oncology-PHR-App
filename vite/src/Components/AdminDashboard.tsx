@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { readPatient } from "../FhirService";
 import { useAuth } from "./useAuth";
 import { db } from "../Firebase";
 import {
@@ -8,7 +10,7 @@ import {
   getDocs,
   onSnapshot,
 } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -19,7 +21,7 @@ const AdminDashboard = () => {
   const [selectUser, setSelectUser] = useState<any>(null);
   const [adminToken, setAdminToken] = useState<string>("");
   const [detailError, setDetailError] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<string[]>([]);
+  // const [notifications, setNotifications] = useState<string[]>([]);
 
   const fetchData = async () => {
     if (token) {
@@ -40,20 +42,26 @@ const AdminDashboard = () => {
     }
   };
 
+  const processedpatients = useRef(new Set());
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "Patient"), (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
           const userData = change.doc.data();
-          setNotifications((prev) => [
-            ...prev,
-            `New user registered: ${userData?.name?.[1]?.given?.[0]} ${userData?.name?.[0]?.family}`,
-          ]);
-          setTimeout(() => {
-            setNotifications((prev) =>
-              prev.filter((notification) => notification !== prev[0])
+          if (!processedpatients.current.has(userData.id)) {
+            processedpatients.current.add(userData.id);
+            toast.info(
+              `New user registered: ${userData?.name?.[0]?.given?.[0]} ${userData?.name?.[0]?.family}`,
+              {
+                position: "top-left",
+                autoClose: 5000,
+                style: {
+                  width: window.innerWidth >= 768 ? "650px" : "90%",
+                  fontSize: window.innerWidth >= 768 ? "16px" : "14px",
+                },
+              }
             );
-          }, 5000);
+          }
         }
       });
     });
@@ -61,13 +69,13 @@ const AdminDashboard = () => {
     return () => unsubscribe();
   }, []);
 
-  const removeNotification = (index: number) => {
-    setNotifications((prev) => prev.filter((_, i) => i !== index));
-  };
-
   useEffect(() => {
     fetchData();
   }, [token]);
+
+  // const removeNotification = (index: number) => {
+  //   setNotifications((prev) => prev.filter((_, i) => i !== index));
+  // };
 
   const handleShowDetail = (user: any) => {
     setAdminToken("");
@@ -91,28 +99,27 @@ const AdminDashboard = () => {
 
   const handleTokenSubmit = async () => {
     if (!selectUser) return;
+
     const userDoc = await getDoc(doc(db, "Patient", selectUser.id));
     const userData = userDoc.data();
-    const fhirId = userData ? userData.fhirId : null;
+    const fhirId = userData?.fhirId;
+
     const isValid = await verifyToken(fhirId);
 
-    if (isValid) {
-      console.log(isValid);
-      try {
-        const detailsDoc = await getDoc(doc(db, "HashMappings", fhirId));
-        const detailsData = detailsDoc.data();
-        setSelectUser({ ...selectUser, details: detailsData });
-        setShowTokenModal(false);
-        setDetailError(null);
-        setAdminToken("");
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setDetailError("Failed");
-        setAdminToken("");
-      }
-    } else {
-      setDetailError("Invalid Token");
+    if (!isValid) {
+      setDetailError("Invalid token");
+      setAdminToken("");
+      return;
     }
+
+    const detailsDoc = await getDoc(doc(db, "HashMappings", fhirId));
+    const hashMapping = detailsDoc.data()?.mapping;
+
+    const unhashedPatient = await readPatient(fhirId, hashMapping);
+
+    setSelectUser({ ...unhashedPatient, details: unhashedPatient });
+    setShowTokenModal(false);
+    setDetailError(null);
   };
 
   const handleCancel = () => {
@@ -133,11 +140,13 @@ const AdminDashboard = () => {
         justifyContent: "center",
         alignItems: "center",
         height: "100vh",
+        background: "linear-gradient(to bottom, #CCFBF1, #FFFFFF)",
       }}
     >
       <div
         style={{
-          width: "1000px",
+          width: "90%",
+          maxWidth: "1000px",
           padding: "20px",
           borderRadius: "10px",
           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
@@ -155,7 +164,7 @@ const AdminDashboard = () => {
         >
           Admin Dashboard
         </h2>
-        <div>
+        {/* <div>
           {notifications.map((notification, index) => (
             <div
               key={index}
@@ -184,7 +193,7 @@ const AdminDashboard = () => {
               </button>
             </div>
           ))}
-        </div>
+        </div> */}
         <div>
           {users ? (
             <table
@@ -192,6 +201,7 @@ const AdminDashboard = () => {
                 width: "100%",
                 borderCollapse: "collapse",
                 marginTop: "20px",
+                fontSize: "18px",
               }}
             >
               <thead>
@@ -212,7 +222,16 @@ const AdminDashboard = () => {
                       backgroundColor: "#f9f9f9",
                     }}
                   >
-                    Actions
+                    Patient
+                  </th>
+                  <th
+                    style={{
+                      padding: "10px",
+                      border: "1px solid #ddd",
+                      backgroundColor: "#f9f9f9",
+                    }}
+                  >
+                    TargetURL
                   </th>
                 </tr>
               </thead>
@@ -223,6 +242,7 @@ const AdminDashboard = () => {
                       style={{
                         padding: "10px",
                         border: "1px solid #ddd",
+                        wordBreak: "break-word",
                       }}
                     >
                       {user.id}
@@ -240,11 +260,21 @@ const AdminDashboard = () => {
                           color: "white",
                           borderRadius: "5px",
                           cursor: "pointer",
+                          fontSize: "14px",
                         }}
                         onClick={() => handleShowDetail(user)}
                       >
-                        View Details
+                        Details
                       </button>
+                    </td>
+                    <td
+                      style={{
+                        padding: "10px",
+                        border: "1px solid #ddd",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {user.observations?.url || "N/A"}
                     </td>
                   </tr>
                 ))}
@@ -254,10 +284,11 @@ const AdminDashboard = () => {
             <div> {error && <p style={{ color: "red" }}>{error}</p>}</div>
           )}
         </div>
+
         <button
           style={{
             padding: "10px 20px",
-            backgroundColor: "#007bff",
+            backgroundColor: "#E53935",
             color: "white",
             borderRadius: "5px",
             cursor: "pointer",
@@ -279,6 +310,8 @@ const AdminDashboard = () => {
               padding: "20px",
               borderRadius: "10px",
               boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+              width: "90%",
+              maxWidth: "400px",
             }}
           >
             <h3>Enter Admin Token</h3>
@@ -303,6 +336,8 @@ const AdminDashboard = () => {
                 borderRadius: "5px",
                 cursor: "pointer",
                 marginRight: "10px",
+                width: "100%",
+                marginBottom: "10px",
               }}
               onClick={handleTokenSubmit}
             >
@@ -315,6 +350,7 @@ const AdminDashboard = () => {
                 color: "white",
                 borderRadius: "5px",
                 cursor: "pointer",
+                width: "100%",
               }}
               onClick={handleCancel}
             >
@@ -338,10 +374,10 @@ const AdminDashboard = () => {
         >
           <div
             style={{
-              width: "1000px",
-              height: "450px",
+              width: "90%",
+              maxWidth: "1000px",
+              height: "auto",
               padding: "20px",
-              alignContent: "center",
               borderRadius: "10px",
               backgroundColor: "white",
             }}
@@ -362,14 +398,15 @@ const AdminDashboard = () => {
                 borderRadius: "8px",
                 padding: "15px",
                 backgroundColor: "#f9f9f9",
+                textAlign: "left",
               }}
             >
               <p>
-                <strong>Name:</strong> {selectUser.name?.[1]?.given?.[0]}{" "}
+                <strong>Name:</strong> {selectUser.name?.[0]?.given?.[0]}{" "}
                 {selectUser.name?.[0]?.family}
               </p>
               <p>
-                <strong>Given:</strong> {selectUser.name?.[1]?.given?.[0]}
+                <strong>Given:</strong> {selectUser.name?.[0]?.given?.[0]}
               </p>
               <p>
                 <strong>Family:</strong> {selectUser.name?.[0]?.family}

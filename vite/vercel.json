@@ -1,16 +1,8 @@
 {
   "rewrites": [
     {
-      "src:": "/",
-      "dest": "/"
-    },
-    {
-      "src": "/phr",
-      "dest": "/"
-    },
-    {
-      "src": "profile",
-      "dest": "/profile"
+      "source": "/(.*)",
+      "destination": "/"
     }
   ]
 }

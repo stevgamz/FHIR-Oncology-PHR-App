@@ -8,12 +8,36 @@ function footer() {
               <h3 className="text-lg font-bold mb-2">Menu</h3>
               <ul>
                 <li>
-                  <a href="/phr" className="text-gray-400 hover:text-white">
+                  <a
+                    href="/phr"
+                    className="text-gray-400 hover:text-white"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const homeElement = document.getElementById("home");
+                      if (homeElement) {
+                        homeElement.scrollIntoView({ behavior: "smooth" });
+                      } else {
+                        window.location.href = "/phr";
+                      }
+                    }}
+                  >
                     Home
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 hover:text-white">
+                  <a
+                    href="/phr"
+                    className="text-gray-400 hover:text-white"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const homeElement = document.getElementById("about");
+                      if (homeElement) {
+                        homeElement.scrollIntoView({ behavior: "smooth" });
+                      } else {
+                        window.location.href = "/phr";
+                      }
+                    }}
+                  >
                     About Us
                   </a>
                 </li>
@@ -23,7 +47,19 @@ function footer() {
                   </a>
                 </li> */}
                 <li>
-                  <a href="/profile" className="text-gray-400 hover:text-white">
+                  <a
+                    href="/profile"
+                    className="text-gray-400 hover:text-white"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const homeElement = document.getElementById("profile");
+                      if (homeElement) {
+                        homeElement.scrollIntoView({ behavior: "smooth" });
+                      } else {
+                        window.location.href = "/profile";
+                      }
+                    }}
+                  >
                     Profile
                   </a>
                 </li>

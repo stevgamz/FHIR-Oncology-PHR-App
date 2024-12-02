@@ -604,8 +604,8 @@ export const deleteObservation = async (id: string): Promise<Response> => {
 };
 
 export const createCondition = async (condition: Condition): Promise<any> => {
-  const response = await fetch(`${baseUrl}/Condition`, {
-    method: "POST",
+  const response = await fetch(`${baseUrl}/Condition/${condition.id}`, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/fhir+json",
     },
