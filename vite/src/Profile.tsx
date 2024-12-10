@@ -34,9 +34,8 @@ const Profile: React.FC = () => {
           }
         } else {
           console.error("PHR ID does not exist in the database");
+          await auth.signOut();
         }
-      } else {
-        await auth.signOut();
       }
       // });
     };

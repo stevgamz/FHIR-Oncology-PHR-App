@@ -1,15 +1,46 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useAuth } from "./useAuth";
 import { Navigate } from "react-router-dom";
 
-export const PrivateRoute: React.FC<{
-  component: React.ComponentType;
-}> = ({ component: Component }) => {
-  const { users, loading } = useAuth();
+interface PrivateRouteProps {
+  component: React.FC;
+  isAdminRoute?: boolean | null;
+}
+
+export const PrivateRoute: React.FC<PrivateRouteProps> = ({
+  component: Component,
+  isAdminRoute = false,
+}) => {
+  const { users, loading, isAdmin } = useAuth();
+
+  useEffect(() => {
+    if (isAdmin && location.pathname !== "/admin/dashboard") {
+      window.location.href = "/admin/dashboard";
+    }
+  }, [isAdmin]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        Loading...
+      </div>
+    );
   }
 
-  return users ? <Component /> : <Navigate to="/" />;
+  if (!users) {
+    return <Navigate to="/" />;
+  }
+
+  if (isAdminRoute && !isAdmin) {
+    return <Navigate to="/phr" />;
+  }
+
+  return <Component />;
 };

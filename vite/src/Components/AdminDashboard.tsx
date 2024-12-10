@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { readPatient } from "../FhirService";
 import { useAuth } from "./useAuth";
-import { db } from "../Firebase";
+import { auth, db } from "../Firebase";
 import {
   collection,
   doc,
@@ -21,52 +21,91 @@ const AdminDashboard = () => {
   const [selectUser, setSelectUser] = useState<any>(null);
   const [adminToken, setAdminToken] = useState<string>("");
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [adminName, setAdminName] = useState<string | null>(null);
   // const [notifications, setNotifications] = useState<string[]>([]);
 
   const fetchData = async () => {
-    if (token) {
-      try {
-        const userCollection = collection(db, "Patient");
-        const usersSnapshot = await getDocs(userCollection);
-        const usersList = usersSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setUsers(usersList);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setError("Failed");
+    const user = auth.currentUser;
+    if (user) {
+      const emailPrefix = user.email?.split("@")[0];
+      if (emailPrefix) {
+        try {
+          const adminDoc = await getDoc(doc(db, "admins", emailPrefix));
+          const admin = adminDoc.data()?.email?.split("@")[0];
+          setAdminName(admin);
+          const adminCountry = adminDoc.data()?.country;
+
+          !adminCountry && setError("Admin country not found");
+
+          if (token) {
+            const userCollection = collection(db, "Patient");
+            const usersSnapshot = await getDocs(userCollection);
+            const usersList = usersSnapshot.docs
+              .map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+              }))
+              .filter((user: any) => user.country === adminCountry);
+
+            setUsers(usersList);
+          } else {
+            setError("Token not found");
+          }
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          setError("Failed");
+        }
       }
-    } else {
-      setError("Token not found");
     }
   };
 
   const processedpatients = useRef(new Set());
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "Patient"), (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const userData = change.doc.data();
-          if (!processedpatients.current.has(userData.id)) {
-            processedpatients.current.add(userData.id);
-            toast.info(
-              `New user registered: ${userData?.name?.[0]?.given?.[0]} ${userData?.name?.[0]?.family}`,
-              {
-                position: "top-left",
-                autoClose: 5000,
-                style: {
-                  width: window.innerWidth >= 768 ? "650px" : "90%",
-                  fontSize: window.innerWidth >= 768 ? "16px" : "14px",
-                },
-              }
-            );
-          }
+    let adminCountry = "";
+    const fetchCountry = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const emailPrefix = user.email?.split("@")[0];
+        if (emailPrefix) {
+          const adminDoc = await getDoc(doc(db, "admins", emailPrefix));
+          adminCountry = adminDoc.data()?.country;
         }
-      });
-    });
+      }
+    };
 
-    return () => unsubscribe();
+    fetchCountry().then(() => {
+      if (adminCountry) {
+        const unsubscribe = onSnapshot(
+          collection(db, "Patient"),
+          (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+              if (change.type === "added") {
+                const userData = change.doc.data();
+                if (
+                  userData.country === adminCountry &&
+                  !processedpatients.current.has(userData.id)
+                ) {
+                  processedpatients.current.add(userData.id);
+                  toast.info(
+                    `New user registered: ${userData?.name?.[0]?.given?.[0]} ${userData?.name?.[0]?.family}`,
+                    {
+                      position: "top-left",
+                      autoClose: 5000,
+                      style: {
+                        width: window.innerWidth >= 768 ? "650px" : "90%",
+                        fontSize: window.innerWidth >= 768 ? "16px" : "14px",
+                      },
+                    }
+                  );
+                }
+              }
+            });
+          }
+        );
+
+        return () => unsubscribe();
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -77,10 +116,34 @@ const AdminDashboard = () => {
   //   setNotifications((prev) => prev.filter((_, i) => i !== index));
   // };
 
-  const handleShowDetail = (user: any) => {
+  const handleShowDetail = async (user: any) => {
     setAdminToken("");
     setShowTokenModal(true);
     setSelectUser(user);
+
+    if (user.fhirId) {
+      try {
+        const getToken = await getDoc(doc(db, "PatientTokens", user.fhirId));
+        if (getToken.exists()) {
+          const token = getToken.data().token;
+          toast.success(`Token is ${token}`, {
+            position: "top-center",
+            autoClose: 5000,
+          });
+        } else {
+          toast.error("Token not found", {
+            position: "top-center",
+            autoClose: 5000,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Failed to fetch token", {
+          position: "top-center",
+          autoClose: 5000,
+        });
+      }
+    }
   };
 
   const verifyToken = async (patientId: string): Promise<boolean> => {
@@ -99,13 +162,11 @@ const AdminDashboard = () => {
 
   const handleTokenSubmit = async () => {
     if (!selectUser) return;
-
     const userDoc = await getDoc(doc(db, "Patient", selectUser.id));
     const userData = userDoc.data();
     const fhirId = userData?.fhirId;
 
     const isValid = await verifyToken(fhirId);
-
     if (!isValid) {
       setDetailError("Invalid token");
       setAdminToken("");
@@ -114,7 +175,6 @@ const AdminDashboard = () => {
 
     const detailsDoc = await getDoc(doc(db, "HashMappings", fhirId));
     const hashMapping = detailsDoc.data()?.mapping;
-
     const unhashedPatient = await readPatient(fhirId, hashMapping);
 
     setSelectUser({ ...unhashedPatient, details: unhashedPatient });
@@ -141,8 +201,21 @@ const AdminDashboard = () => {
         alignItems: "center",
         height: "100vh",
         background: "linear-gradient(to bottom, #CCFBF1, #FFFFFF)",
+        position: "relative",
       }}
     >
+      <div
+        style={{
+          position: "absolute",
+          top: "50px",
+          right: "50px",
+          fontSize: "16px",
+          color: "#333",
+          fontWeight: "bold",
+        }}
+      >
+        Welcome, {adminName}
+      </div>
       <div
         style={{
           width: "90%",
@@ -222,7 +295,7 @@ const AdminDashboard = () => {
                       backgroundColor: "#f9f9f9",
                     }}
                   >
-                    Patient
+                    Patient Data
                   </th>
                   <th
                     style={{
@@ -231,7 +304,7 @@ const AdminDashboard = () => {
                       backgroundColor: "#f9f9f9",
                     }}
                   >
-                    TargetURL
+                    URL
                   </th>
                 </tr>
               </thead>

@@ -234,7 +234,7 @@ const PatientForm: React.FC = () => {
       // setCity(patient?.address?.[0]?.city || "");
       // setState(patient?.address?.[0]?.state || "");
       // setPostalCode(patient?.address?.[0]?.postalCode || "");
-      // setCountry(patient?.address?.[0]?.country || "");
+      setCountry(patient?.address?.[0]?.country || "");
       // setManagingOrganization(patient?.managingOrganization?.reference || "");
     }
     fetchPatientData();
@@ -400,6 +400,12 @@ const PatientForm: React.FC = () => {
           setPatient(encryptedPatient.patient);
           setJsonResult(encryptedPatient.patient);
 
+          await setDoc(phrDocRef, {
+            googleId: user.uid,
+            phrId: phrId,
+            fhirId: generatedId,
+          });
+
           await setDoc(patientDocRef, {
             fhirId: savedPatient.id,
             name: [
@@ -423,6 +429,7 @@ const PatientForm: React.FC = () => {
                 value: savedPatient.telecom?.[1]?.value || "",
               },
             ],
+            country: country,
           });
 
           navigate("/phr");

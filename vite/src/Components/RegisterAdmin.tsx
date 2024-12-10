@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { useAuth } from "./useAuth";
+import { useNavigate } from "react-router-dom";
 
 const RegisterAdmin = () => {
-  const { register } = useAuth();
+  const { registerAdmin } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [country, setCountry] = useState("");
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await register(email, password);
-      window.location.href = "/admin/dashboard";
+      await registerAdmin(email, password, country);
+      navigate("/admin/dashboard");
     } catch (error) {
       setError("Registration failed");
     }
@@ -72,6 +75,20 @@ const RegisterAdmin = () => {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+        />
+        <input
+          style={{
+            width: "100%",
+            padding: "10px",
+            marginBottom: "10px",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+            fontSize: "16px",
+          }}
+          type="text"
+          placeholder="Country"
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
         />
         <button
           style={{

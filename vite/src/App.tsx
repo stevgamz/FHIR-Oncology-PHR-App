@@ -26,7 +26,9 @@ const App: React.FC = () => {
 
             <Route
               path="/admin/dashboard"
-              element={<PrivateRoute component={AdminDashboard} />}
+              element={
+                <PrivateRoute component={AdminDashboard} isAdminRoute={true} />
+              }
             />
 
             <Route
