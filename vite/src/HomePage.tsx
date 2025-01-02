@@ -14,43 +14,41 @@ const HomePage = () => {
   const [family, setFamily] = useState<string>("");
   const [dataComplete, setDataComplete] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        const phrDoc = await getDoc(doc(db, "PHR", user.uid));
-        const phrId = phrDoc.data()?.phrId;
-        if (phrId) {
-          const patientDoc = await getDoc(doc(db, "Patient", phrId));
-          const fhirId = patientDoc.data()?.fhirId;
-
-          let patient;
-          if (fhirId) {
-            const mappingDoc = await getDoc(doc(db, "HashMappings", fhirId));
-            const storedMapping = mappingDoc.data()?.mapping;
-            patient = await readPatient(fhirId, storedMapping);
-          } else {
-            patient = patientDoc.data();
-          }
-          setName(patient.name[0].given[0]);
-          setFamily(patient.name[0].family);
-
-          const isComplete =
-            patient.name[0].given[0] &&
-            patient.name[0].family &&
-            patient.gender &&
-            patient.birthDate &&
-            patient.telecom?.[0].value &&
-            patient.telecom?.[1].value;
-
-          setDataComplete(!!isComplete);
+  const fetchData = auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+      const phrId = phrDoc.data()?.phrId;
+      if (phrId) {
+        const patientDoc = await getDoc(doc(db, "Patient", phrId));
+        const fhirId = patientDoc.data()?.fhirId;
+        let patient;
+        if (fhirId) {
+          const mappingDoc = await getDoc(doc(db, "HashMappings", fhirId));
+          const storedMapping = mappingDoc.data()?.mapping;
+          patient = await readPatient(fhirId, storedMapping);
         } else {
-          console.error("PHR ID does not exist in the database");
-          await auth.signOut();
+          patient = patientDoc.data();
         }
+        setName(patient.name[0].given[0]);
+        setFamily(patient.name[0].family);
+
+        const isComplete =
+          patient.name[0].given[0] &&
+          patient.name[0].family &&
+          patient.gender &&
+          patient.birthDate &&
+          patient.telecom?.[0].value &&
+          patient.telecom?.[1].value;
+
+        setDataComplete(!!isComplete);
+      } else {
+        console.error("PHR ID does not exist in the database");
+        await auth.signOut();
       }
-    };
-    fetchData();
+    }
+  });
+  useEffect(() => {
+    fetchData;
   }, []);
 
   const handleNavigate = (path: string) => {
@@ -75,10 +73,10 @@ const HomePage = () => {
         <img
           src="https://placehold.co/1920x600"
           alt="Woman stretching outdoors"
-          className="w-full h-96 object-cover"
+          className="w-full h-96 md:h-auto object-cover"
         />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-full shadow-lg text-center">
+        <div className="absolute inset-0 flex items-center justify-center space-y-4">
+          <div className="bg-white p-6 rounded-xl shadow-lg text-center">
             <h2 className="text-2xl font-bold">
               {/* // panggil nama user dari firebase */}
               Welcome, {name} {family}
@@ -88,42 +86,40 @@ const HomePage = () => {
       </section>
 
       <section className="bg-blue-50 py-12" id="about">
-        <div className="container mx-auto flex flex-col md:flex-row items-center justify-between px-6">
-          <div className="md:w-1/2 mb-6 md:mb-0 flex justify-center">
-            <img
-              src="https://placehold.co/400x400"
-              // src={Pinjol}
-              alt="Doctor with arms crossed"
-              className="rounded-lg shadow-md"
-              style={{
-                height: "400px",
-                width: "400px",
-                objectFit: "cover",
-              }}
-            />
-          </div>
-          <div className="md:w-1/2 text-center md:text-left">
-            <h2 className="text-3xl font-bold mb-4">
-              Welcome to Oncology FHIR
-            </h2>
-            <p className="text-gray-700 mb-6 text-justify">
-              Lorem ipsum dolor amet, consectetur adipiscing elit. Nam nec est
-              arcu. Suspendisse potenti. Nullam eget ligula eget nisi sodales
-              malesuada. Nullam nec dolor nec neque malesuada ultricies. Nulla
-              in imperdiet sapien.
-            </p>
-            <button className="bg-teal-600 text-white py-2 px-6 rounded-full">
-              More
-            </button>
-          </div>
-          <div className="md:w-1/2 mt-6 md:mt-0 flex justify-center">
-            <img
-              src="https://placehold.co/400x400"
-              // src={Pinjol}
-              alt="Doctor holding a stethoscope"
-              className="rounded-lg shadow-md"
-              style={{ height: "400px", width: "400px", objectFit: "cover" }}
-            />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0 md:space-x-6">
+            <div className="md:w-1/3 flex justify-center">
+              <img
+                src="https://placehold.co/400x400"
+                alt="Doctor with arms crossed"
+                className="rounded-lg shadow-md object-cover w-full max-w-md"
+              />
+            </div>
+
+            <div className="md:w-1/3 text-center md:text-left">
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">
+                {/* Welcome to Oncology FHIR */}
+                Welcome to Oncology PHR
+              </h2>
+              <p className="text-gray-700 text-base leading-relaxed">
+                Discover a seamless way to manage your personal health records.
+                Our platform is designed to empower you with easy access and
+                secure management of your oncology health information.
+              </p>
+              <div className="mt-6">
+                <button className="bg-teal-600 hover:bg-teal-700 text-white py-2 px-6 rounded-full shadow-md transition duration-200">
+                  More
+                </button>
+              </div>
+            </div>
+
+            <div className="md:w-1/3 flex justify-center">
+              <img
+                src="https://placehold.co/400x400"
+                alt="Doctor holding a stethoscope"
+                className="rounded-lg shadow-md object-cover w-full max-w-md"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -140,16 +136,16 @@ const HomePage = () => {
             onClick={() => handleNavigate("/phr/observation")}
             className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-lg transition"
           >
-            <p className="text-teal-500 font-bold">Observation Form</p>
+            <p className="text-teal-600 font-bold">Observation Form</p>
             <i className="fas fa-arrow-right text-teal-500 mt-2"></i>
           </button>
-          <a
-            href="/phr/condition"
+          <button
+            onClick={() => handleNavigate("/phr/condition")}
             className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-lg transition"
           >
-            <p className="text-teal-500 font-bold">Condition Form</p>
+            <p className="text-teal-600 font-bold">Condition Form</p>
             <i className="fas fa-arrow-right text-teal-500 mt-2"></i>
-          </a>
+          </button>
         </div>
       </section>
 

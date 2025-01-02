@@ -11,8 +11,9 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { toast } from "react-toastify";
+// import { sendEmailVerification } from "firebase/auth";
 
-const AdminDashboard = () => {
+const OrganizationDashboard = () => {
   const navigate = useNavigate();
   const { token, logout } = useAuth();
   const [users, setUsers] = useState<any>(null);
@@ -27,16 +28,17 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     const user = auth.currentUser;
     if (user) {
-      const emailPrefix = user.email?.split("@")[0];
-      if (emailPrefix) {
+      const organizationData = await getDocs(collection(db, "Organizations"));
+      const organizationDoc = organizationData.docs
+        .find((doc) => {
+          return doc.data().email === user.email;
+        })
+        ?.data();
+
+      if (organizationDoc) {
         try {
-          const adminDoc = await getDoc(doc(db, "admins", emailPrefix));
-          const admin = adminDoc.data()?.email?.split("@")[0];
-          setAdminName(admin);
-          const adminCountry = adminDoc.data()?.country;
-
-          !adminCountry && setError("Admin country not found");
-
+          const organizationName = organizationDoc.name;
+          setAdminName(organizationName);
           if (token) {
             const userCollection = collection(db, "Patient");
             const usersSnapshot = await getDocs(userCollection);
@@ -45,8 +47,7 @@ const AdminDashboard = () => {
                 id: doc.id,
                 ...doc.data(),
               }))
-              .filter((user: any) => user.country === adminCountry);
-
+              .filter((user: any) => user.country === organizationDoc.country);
             setUsers(usersList);
           } else {
             setError("Token not found");
@@ -65,10 +66,14 @@ const AdminDashboard = () => {
     const fetchCountry = async () => {
       const user = auth.currentUser;
       if (user) {
-        const emailPrefix = user.email?.split("@")[0];
-        if (emailPrefix) {
-          const adminDoc = await getDoc(doc(db, "admins", emailPrefix));
-          adminCountry = adminDoc.data()?.country;
+        const organizationData = await getDocs(collection(db, "Organizations"));
+        const organizationDoc = organizationData.docs
+          .find((doc) => {
+            return doc.data().email === user.email;
+          })
+          ?.data();
+        if (organizationDoc) {
+          adminCountry = organizationDoc.country;
         }
       }
     };
@@ -517,4 +522,74 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default OrganizationDashboard;
+
+//     const emailSent = await sendApprovalEmail(user.email, user.fhirId);
+//     if (emailSent) {
+//       toast.info("Approval email sent", {
+//         position: "top-center",
+//         autoClose: 5000,
+//       });
+//     } else {
+//       toast.error("Failed to send approval email", {
+//         position: "top-center",
+//         autoClose: 5000,
+//       });
+//     }
+
+//     const aprrovalGranted = await grantApproval(user.fhirId);
+
+//     if (aprrovalGranted) {
+//      const getToken = await getDoc(doc(db, "PatientTokens", user.fhirId));
+//       if (getToken.exists()) {
+//         const token = getToken.data().token;
+//         toast.success(`Token is ${token}`, {
+//           position: "top-center",
+//           autoClose: 5000,
+//         });
+//       } else {
+//         toast.error("Token not found", {
+//           position: "top-center",
+//           autoClose: 5000,
+//         });
+//       }
+//     } else {
+//       toast.error("Failed to grant approval", {
+//         position: "top-center",
+//         autoClose: 5000,
+//       });
+//     }
+//   } catch (error) {
+//     console.error("Error fetching data:", error);
+//     toast.error("Failed to fetch token", {
+//       position: "top-center",
+//       autoClose: 5000,
+//     });
+//   }
+// };
+
+// const sendApprovalEmail = async (email: string, approvalUrl: string) => {
+//   try {
+//     const message = await fetch("/api/send-approval-email", {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify({ to: email, subject: "Approval Request", body: `Click the link to approve data access: ${approvalUrl}` }),
+//     });
+
+//     if(!message.ok) {
+//       throw new Error("Failed to send email");
+//     }
+
+//     toast.success("Approval email sent", {
+//       position: "top-center",
+//       autoClose: 5000,
+//     });
+//   } catch (error) {
+//     console.error("Error sending email:", error);
+//     toast.error("Failed to send email", {
+//       position: "top-center",
+//       autoClose: 5000,
+//     });
+//     return false;

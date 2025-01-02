@@ -234,7 +234,7 @@ const Profile: React.FC = () => {
                     Cancel
                   </button> */}
                 <button
-                  onClick={() => navigate("/profile/edit")}
+                  onClick={() => navigate("/phr/profile/edit")}
                   className="bg-teal-600 text-white px-4 py-2 rounded"
                 >
                   Edit Profile

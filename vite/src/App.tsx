@@ -1,13 +1,14 @@
 import React from "react";
 import Login from "./Components/Login";
 import HomePage from "./HomePage";
+import LandingPage from "./LandingPage";
 import Profile from "./Profile";
 import PatientForm from "./PatientForm";
 import ObservationForm from "./ObservationForm";
 import ConditionForm from "./ConditionForm";
-import Admin from "./Components/Admin";
-import AdminDashboard from "./Components/AdminDashboard";
-import RegisterAdmin from "./Components/RegisterAdmin";
+import LoginOrganization from "./Components/LoginOrganization";
+import OrganizationDashboard from "./Components/OrganizationDashboard";
+import RegisterOrganization from "./Components/RegisterOrganization";
 import { AuthProvider } from "./Components/useAuth";
 import { PrivateRoute } from "./Components/PrivateRoute";
 import { ToastContainer } from "react-toastify";
@@ -20,27 +21,32 @@ const App: React.FC = () => {
       <Router>
         <div className="App">
           <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/registeradmin" element={<RegisterAdmin />} />
+            <Route path="/phr/login" element={<Login />} />
+            <Route path="/admin" element={<LoginOrganization />} />
+            <Route path="/registeradmin" element={<RegisterOrganization />} />
 
             <Route
               path="/admin/dashboard"
               element={
-                <PrivateRoute component={AdminDashboard} isAdminRoute={true} />
+                <PrivateRoute
+                  component={OrganizationDashboard}
+                  isAdminRoute={true}
+                />
               }
             />
 
+            {/* <Route path="/" element={<PrivateRoute component={HomePage} />} /> */}
+            <Route path="/" element={<LandingPage />} />
             <Route
               path="/phr"
               element={<PrivateRoute component={HomePage} />}
             />
             <Route
-              path="/profile"
+              path="/phr/profile"
               element={<PrivateRoute component={Profile} />}
             />
             <Route
-              path="/profile/edit"
+              path="/phr/profile/edit"
               element={<PrivateRoute component={PatientForm} />}
             />
             <Route

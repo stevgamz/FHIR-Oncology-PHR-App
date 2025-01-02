@@ -4,7 +4,6 @@ import GoogleButton from "react-google-button";
 import { auth, db, provider } from "../Firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
-// import Pinjol from "../assets/pinjolstip.jpeg";
 import "react-toastify/dist/ReactToastify.css";
 import bg from "../assets/bg-phr.png";
 
@@ -101,7 +100,6 @@ const Login = () => {
                 position: "top-center",
                 autoClose: 2000,
               });
-              // navigate("/phr");
             }
           };
           navigate("/phr");
@@ -123,79 +121,117 @@ const Login = () => {
         display: "flex",
         height: "100vh",
         alignItems: "center",
-        width: "auto",
-        margin: "auto",
         justifyContent: "center",
-        padding: "20px",
-        flexDirection: "column",
-        textAlign: "center",
         backgroundImage: `url(${bg})`,
       }}
     >
-      <header
+      <button
         style={{
-          marginBottom: "20px",
+          padding: "10px 15px",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          fontSize: "1rem",
+          fontWeight: "bold",
+          color: "#fff",
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          borderRadius: "5px",
+          position: "fixed",
+          top: "80px",
+          left: "80px",
+        }}
+        onClick={() => {
+          navigate("/");
         }}
       >
-        <h1
-          style={{
-            fontSize: "2rem",
-            fontWeight: "bold",
-            color: "#333",
-          }}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          style={{ marginRight: "5px" }}
         >
-          Welcome to PHR
-        </h1>
-        <p
-          style={{
-            fontSize: "1rem",
-            color: "#333",
-          }}
-        >
-          Your personal health record manager. Secure, fast, and easy to use.
-        </p>
-      </header>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        Back
+      </button>
+
       <div
         style={{
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          maxWidth: "600px",
+          justifyContent: "center",
           backgroundColor: "#fff",
           borderRadius: "10px",
           padding: "20px",
           boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+          margin: "auto",
         }}
       >
-        <img
-          src="https://placehold.co/400x300"
-          // src={Pinjol}
-          alt="PHR logo"
+        <header
+          style={{ marginBottom: "20px", textAlign: "center", width: "100%" }}
+        >
+          <h1
+            style={{
+              fontSize: "2rem",
+              fontWeight: "bold",
+              color: "#333",
+            }}
+          >
+            Welcome to Oncology PHR
+          </h1>
+          <p
+            style={{
+              fontSize: "1rem",
+              color: "#333",
+            }}
+          >
+            Your personal health record manager. Secure, fast, and easy to use.
+          </p>
+        </header>
+        <div
           style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
             width: "100%",
-            maxWidth: "400px",
-            height: "300px",
-            objectFit: "cover",
-            borderRadius: "10px",
-            marginBottom: "20px",
-          }}
-        />
-        <p
-          style={{
-            fontSize: "1rem",
-            color: "#555",
-            marginBottom: "20px",
           }}
         >
-          Sign in with your Google account to get started.
-        </p>
-        <GoogleButton
-          style={{
-            fontSize: "1rem",
-            cursor: "pointer",
-          }}
-          onClick={googleSignIn}
-        />
+          <img
+            src="https://placehold.co/400x300"
+            alt="PHR logo"
+            style={{
+              width: "100%",
+              maxWidth: "400px",
+              height: "300px",
+              objectFit: "cover",
+              borderRadius: "10px",
+              marginBottom: "20px",
+            }}
+          />
+          <p
+            style={{
+              fontSize: "1rem",
+              color: "#555",
+              marginBottom: "20px",
+            }}
+          >
+            Sign in with your Google account to get started.
+          </p>
+          <GoogleButton
+            style={{
+              fontSize: "1rem",
+              cursor: "pointer",
+            }}
+            onClick={googleSignIn}
+          />
+        </div>
       </div>
     </div>
   );

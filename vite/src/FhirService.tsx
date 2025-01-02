@@ -290,16 +290,16 @@ interface Patient {
     reference: string;
   };
   token?: string;
-  // address?: Array<{
-  //   use?: string;
-  //   type?: string;
-  //   text?: string;
-  //   line: Array<string>;
-  //   city: string;
-  //   state: string;
-  //   postalCode: string;
-  //   country: string;
-  // }>;
+  address?: Array<{
+    // use?: string;
+    // type?: string;
+    // text?: string;
+    // line: Array<string>;
+    // city: string;
+    // state: string;
+    // postalCode: string;
+    country: string;
+  }>;
 }
 
 interface Observation {
@@ -311,6 +311,15 @@ interface Observation {
 
 interface Condition {
   id?: string;
+}
+
+interface Organization {
+  id?: string;
+  name: string;
+  // type: string;
+  // address: string;
+  // contact: string;
+  // endpoint: string;
 }
 
 export const createPatient = async (
@@ -651,4 +660,52 @@ export const deleteCondition = async (id: string): Promise<Response> => {
     method: "DELETE",
   });
   return response;
+};
+
+export const createOrganization = async (
+  organization: Organization
+): Promise<any> => {
+  const response = await fetch(`${baseUrl}/Organization/${organization.id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/fhir+json",
+    },
+    body: JSON.stringify(organization),
+  });
+  return response.json();
+};
+
+// export const readOrganization = async (name: string): Promise<any> => {
+//   const response = await fetch(`${baseUrl}/Organization/${name}`, {
+//     method: "GET",
+//     headers: {
+//       "Content-Type": "application/fhir+json",
+//     },
+//   });
+//   return response.json();
+// };
+
+export const readOrganization = async (name: string): Promise<any> => {
+  const response = await fetch(`${baseUrl}/Organization/_search?name=${name}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/fhir+json",
+    },
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = await response.json();
+
+  const organization = data.entry?.find(
+    (entry: any) => entry.resource.name === name
+  );
+
+  if (!organization) {
+    return null;
+  }
+
+  return organization.resource.id;
 };

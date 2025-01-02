@@ -6,7 +6,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "../Firebase";
 
 const auth = getAuth();
@@ -16,12 +16,8 @@ interface AuthContextType {
   loading: boolean;
   token: string | null;
   isAdmin: string | null;
-  loginAdmin: (email: string, password: string) => Promise<void>;
-  registerAdmin: (
-    email: string,
-    password: string,
-    country: string
-  ) => Promise<void>;
+  loginOrganization: (email: string, password: string) => Promise<void>;
+  registerOrganization: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -41,10 +37,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (user) {
         setUsers(user as firebase.User | null);
-        const emailPrefix = user.email?.split("@")[0];
-        if (emailPrefix) {
-          const adminDoc = await getDoc(doc(db, "admins", emailPrefix));
-          const role = adminDoc.data()?.role === "admin" ? "admin" : null;
+
+        const organizationData = await getDocs(collection(db, "Organizations"));
+        const organizationDoc = organizationData.docs
+          .find((doc) => {
+            return doc.data().email === user.email;
+          })
+          ?.data();
+        if (organizationDoc) {
+          const role = organizationDoc.role === "admin" ? "admin" : null;
           setIsAdmin(role);
           const idToken = await user.getIdToken(true);
           setToken(idToken);
@@ -60,35 +61,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return unsubscribe;
   }, []);
 
-  const loginAdmin = async (email: string, password: string) => {
+  const loginOrganization = async (email: string, password: string) => {
     const adminCredential = await signInWithEmailAndPassword(
       auth,
       email,
       password
     );
     console.log(adminCredential, "adminCredential");
-    // const admin = adminCredential.user;
-    const adminId = email.split("@")[0];
-    const adminDoc = await getDoc(doc(db, "admins", adminId));
-    adminDoc.exists();
+    const organizationData = await getDocs(collection(db, "Organizations"));
+    const organizationDoc = organizationData.docs.find(
+      (doc) => doc.data().email === email
+    );
+    if (organizationDoc) {
+      const role = organizationDoc.data().role === "admin" ? "admin" : null;
+      setIsAdmin(role);
+    }
   };
 
-  const registerAdmin = async (
-    email: string,
-    password: string,
-    country: string
-  ) => {
+  const registerOrganization = async (email: string, password: string) => {
     const adminCredential = await createUserWithEmailAndPassword(
       auth,
       email,
       password
     );
     console.log(adminCredential, "adminCredential");
-
-    // const admin = adminCredential.user;
-    const adminId = email.split("@")[0];
-    const adminDocRef = doc(db, "admins", adminId);
-    await setDoc(adminDocRef, { email, role: "admin", country });
   };
 
   const logout = async () => {
@@ -102,8 +98,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         loading,
         token,
         isAdmin,
-        loginAdmin,
-        registerAdmin,
+        loginOrganization,
+        registerOrganization,
         logout,
       }}
     >
@@ -119,4 +115,38 @@ export const useAuth = () => {
   }
   return context;
 };
-// export const useAuth = () => useContext(AuthContext);
+
+// {
+//   "resourceType": "Organization",
+//   "meta": {
+//     "profile": [
+//       "https://hapi.fhir.tw/fhir/StructureDefinition/TWCoreOrganization"
+//     ]
+//   },
+//   "identifier": [
+//     {
+//       "use": "official",
+//       "type": {
+//         "coding": [
+//           {
+//             "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+//             "code": "PRN"
+//           }
+//         ]
+//       },
+//       "system": "https://twcore.mohw.gov.tw/ig/twcore/CodeSystem/organization-identifier-tw",
+//       "value": "1101020018"
+//     }
+//   ],
+//   "type": [
+//     {
+//       "coding": [
+//         {
+//           "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+//           "code": "prov"
+//         }
+//       ]
+//     }
+//   ],
+//   "name": "twhospital"
+// }

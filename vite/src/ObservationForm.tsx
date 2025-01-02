@@ -19,6 +19,12 @@ interface PatientDataProps {
     system: string;
     value: string;
   }>;
+  managingOrganization?: {
+    reference: string;
+  };
+  address?: Array<{
+    country: string;
+  }>;
   token?: string;
   observations?: Observation;
 }
@@ -68,10 +74,8 @@ const ObservationForm: React.FC = () => {
           if (phrId) {
             const patientDoc = await getDoc(doc(db, "Patient", phrId));
             const fhirId = patientDoc.data()?.fhirId;
-
             const mappingDoc = await getDoc(doc(db, "Patient", fhirId));
             const storedMapping = mappingDoc.data()?.mapping;
-
             const patient = await readPatient(fhirId, storedMapping);
             setPatientData(patient);
             console.log("Patient data:", patient);
@@ -462,6 +466,10 @@ const ObservationForm: React.FC = () => {
               ],
               birthDate: patientData?.birthDate ?? "",
               gender: patientData?.gender ?? "",
+              country: patientData?.address?.[0]?.country ?? "",
+              managingOrganization: {
+                reference: patientData?.managingOrganization?.reference ?? "",
+              },
               observations: newObservations,
             });
 
@@ -493,6 +501,14 @@ const ObservationForm: React.FC = () => {
                 },
               ],
               gender: patientData?.gender ?? "",
+              managingOrganization: {
+                reference: patientData?.managingOrganization?.reference ?? "",
+              },
+              address: [
+                {
+                  country: patientData?.address?.[0]?.country ?? "",
+                },
+              ],
               observations: newObservations,
             };
 
@@ -543,6 +559,40 @@ const ObservationForm: React.FC = () => {
 
   return (
     <div className="bg-gradient-to-r from-purple-100 to-blue-100 min-h-screen flex items-center justify-center">
+      <button
+        style={{
+          padding: "10px 15px",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          fontSize: "1rem",
+          fontWeight: "bold",
+          color: "#000",
+          position: "fixed",
+          left: "50px",
+          top: "50px",
+        }}
+        onClick={() => {
+          navigate("/phr");
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          style={{ marginRight: "5px" }}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        Back
+      </button>
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">
           Vital Signs Observation Form

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "./Firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { createPatient, readPatient } from "./FhirService";
+import { createPatient, readOrganization, readPatient } from "./FhirService";
 import CryptoJS from "crypto-js";
 import "./index.css";
 
@@ -54,13 +54,13 @@ interface Patient {
     reference: string;
   };
   address?: Array<{
-    use?: string;
-    type?: string;
-    text?: string;
-    line: Array<string>;
-    city: string;
-    state: string;
-    postalCode: string;
+    // use?: string;
+    // type?: string;
+    // text?: string;
+    // line: Array<string>;
+    // city: string;
+    // state: string;
+    // postalCode: string;
     country: string;
   }>;
 }
@@ -169,7 +169,7 @@ const PatientForm: React.FC = () => {
   const [state, setState] = useState<string>("");
   const [postalCode, setPostalCode] = useState<string>("");
   const [country, setCountry] = useState<string>("");
-  // const [managingOrganization, setManagingOrganization] = useState<string>("");
+  const [managingOrganization, setManagingOrganization] = useState<string>("");
   const [errors, setErrors] = useState<PatientErrors>({});
   const [hashMapping, setHashMapping] = useState<HashMapping>({
     names: {
@@ -234,8 +234,8 @@ const PatientForm: React.FC = () => {
       // setCity(patient?.address?.[0]?.city || "");
       // setState(patient?.address?.[0]?.state || "");
       // setPostalCode(patient?.address?.[0]?.postalCode || "");
-      setCountry(patient?.address?.[0]?.country || "");
-      // setManagingOrganization(patient?.managingOrganization?.reference || "");
+      // setCountry(patient?.address?.[0]?.country || "");
+      setManagingOrganization(patient?.managingOrganization?.reference || "");
     }
     fetchPatientData();
   }, [patient]);
@@ -293,7 +293,8 @@ const PatientForm: React.FC = () => {
       resourceType: "Patient",
       meta: {
         profile: [
-          "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
+          // "https://hapi.fhir.tw/fhir/StructureDefinition/MITW-T1-SC2-PatientIdentification",
+          "https://hapi.fhir.tw/fhir/StructureDefinition/TWCorePatient",
         ],
       },
       text: {
@@ -346,7 +347,9 @@ const PatientForm: React.FC = () => {
         },
       ],
       managingOrganization: {
-        reference: "Organization/org-hosp-example",
+        reference: `Organization/${await readOrganization(
+          managingOrganization
+        )}`,
       },
       telecom: [
         {
@@ -356,6 +359,18 @@ const PatientForm: React.FC = () => {
         {
           system: "email",
           value: email,
+        },
+      ],
+      address: [
+        {
+          // use: "home",
+          // type: "both",
+          // text: addressLine,
+          // line: [addressLine],
+          // city: city,
+          // state: state,
+          // postalCode: postalCode,
+          country: country,
         },
       ],
     };
@@ -403,7 +418,7 @@ const PatientForm: React.FC = () => {
           await setDoc(phrDocRef, {
             googleId: user.uid,
             phrId: phrId,
-            fhirId: generatedId,
+            fhirId: savedPatient.id,
           });
 
           await setDoc(patientDocRef, {
@@ -430,173 +445,10 @@ const PatientForm: React.FC = () => {
               },
             ],
             country: country,
+            managingOrganization: managingOrganization,
           });
 
           navigate("/phr");
-
-          // Pembuatan FHIR ID baru
-          // if (!phrDoc.data()?.fhirId) {
-          //   const newPatient: Patient = patientStructure;
-          //   newPatient.id = generatedId;
-
-          //   const newToken = generateRandomToken();
-          //   setPatientToken(newToken);
-          //   console.log(newToken);
-
-          //   const { patient: savedPatient, hashMapping } = await createPatient(
-          //     newPatient,
-          //     true
-          //   );
-          //   await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
-          //   setHashMapping(newHashMapping);
-
-          //   if (hashMapping) {
-          //     const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
-          //     await setDoc(mappingDocRef, {
-          //       mapping: hashMapping,
-          //       token: newToken,
-          //     });
-          //   }
-
-          //   const encryptedPatient = await createPatient(newPatient, true);
-          //   setPatient(encryptedPatient.patient);
-          //   setJsonResult(encryptedPatient.patient);
-
-          //   // const patientDataToPass: PatientDataProps = {
-          //   //   id: savedPatient.id,
-          //   //   name: [
-          //   //     {
-          //   //       family: savedPatient.name?.[0]?.family || "",
-          //   //       given: [savedPatient.name?.[0]?.given?.[0] || ""],
-          //   //     },
-          //   //   ],
-          //   //   birthDate: savedPatient.birthDate,
-          //   //   gender: savedPatient.gender,
-          //   //   telecom: [
-          //   //     {
-          //   //       system: savedPatient.telecom?.[0]?.system || "",
-          //   //       value: savedPatient.telecom?.[0]?.value || "",
-          //   //     },
-          //   //     {
-          //   //       system: savedPatient.telecom?.[1]?.system || "",
-          //   //       value: savedPatient.telecom?.[1]?.value || "",
-          //   //     },
-          //   //   ],
-          //   // };
-
-          //   await setDoc(phrDocRef, {
-          //     googleId: user.uid,
-          //     phrId: phrId,
-          //     fhirId: generatedId,
-          //   });
-
-          //   await setDoc(patientDocRef, {
-          //     fhirId: savedPatient.id,
-          //     name: [
-          //       {
-          //         family: savedPatient.name?.[0]?.family || "",
-          //         given: [savedPatient.name?.[0]?.given?.[0] || ""],
-          //       },
-          //     ],
-          //     birthDate: savedPatient.birthDate,
-          //     gender: savedPatient.gender,
-          //     telecom: [
-          //       {
-          //         system: savedPatient.telecom?.[0]?.system || "",
-          //         value: savedPatient.telecom?.[0]?.value || "",
-          //       },
-          //       {
-          //         system: savedPatient.telecom?.[1]?.system || "",
-          //         value: savedPatient.telecom?.[1]?.value || "",
-          //       },
-          //     ],
-          //   });
-
-          //   // navigate("/phr/observation", {
-          //   //   state: {
-          //   //     patientData: patientDataToPass,
-          //   //   },
-          //   // });
-          //   navigate("/phr");
-          // } else {
-          //   // Update/Edit data pasien yang sudah ada
-          //   const newPatient = patientStructure;
-          //   newPatient.id = phrDoc.data()?.fhirId;
-
-          //   const newToken = generateRandomToken();
-          //   setPatientToken(newToken);
-          //   console.log(newToken);
-
-          //   const { patient: savedPatient, hashMapping } = await createPatient(
-          //     newPatient,
-          //     true
-          //   );
-          //   await saveTokenToDatabase(user.uid, savedPatient.id, newToken);
-          //   setHashMapping(newHashMapping);
-
-          //   if (hashMapping) {
-          //     const mappingDocRef = doc(db, "HashMappings", savedPatient.id);
-          //     await setDoc(mappingDocRef, {
-          //       mapping: hashMapping,
-          //       token: newToken,
-          //     });
-          //   }
-
-          //   const encryptedPatient = await createPatient(newPatient, true);
-          //   setPatient(encryptedPatient.patient);
-          //   setJsonResult(encryptedPatient.patient);
-
-          //   // const patientDataToPass: PatientDataProps = {
-          //   //   id: savedPatient.id,
-          //   //   name: [
-          //   //     {
-          //   //       family: savedPatient.name?.[0]?.family || "",
-          //   //       given: [savedPatient.name?.[0]?.given?.[0] || ""],
-          //   //     },
-          //   //   ],
-          //   //   birthDate: savedPatient.birthDate,
-          //   //   gender: savedPatient.gender,
-          //   //   telecom: [
-          //   //     {
-          //   //       system: savedPatient.telecom?.[0]?.system || "",
-          //   //       value: savedPatient.telecom?.[0]?.value || "",
-          //   //     },
-          //   //     {
-          //   //       system: savedPatient.telecom?.[1]?.system || "",
-          //   //       value: savedPatient.telecom?.[1]?.value || "",
-          //   //     },
-          //   //   ],
-          //   // };
-
-          //   await setDoc(patientDocRef, {
-          //     fhirId: savedPatient.id,
-          //     name: [
-          //       {
-          //         family: savedPatient.name?.[0]?.family || "",
-          //         given: [savedPatient.name?.[0]?.given?.[0] || ""],
-          //       },
-          //     ],
-          //     birthDate: savedPatient.birthDate,
-          //     gender: savedPatient.gender,
-          //     telecom: [
-          //       {
-          //         system: savedPatient.telecom?.[0]?.system || "",
-          //         value: savedPatient.telecom?.[0]?.value || "",
-          //       },
-          //       {
-          //         system: savedPatient.telecom?.[1]?.system || "",
-          //         value: savedPatient.telecom?.[1]?.value || "",
-          //       },
-          //     ],
-          //   });
-
-          //   // navigate("/phr/observation", {
-          //   //   state: {
-          //   //     patientData: patientDataToPass,
-          //   //   },
-          //   // });
-          //   navigate("/phr");
-          // }
         }
       });
     } catch (error) {
@@ -704,137 +556,164 @@ const PatientForm: React.FC = () => {
   // };
 
   return (
-    <div className="bg-gradient-to-r from-green-100 to-blue-100 min-h-screen flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">
+    <div className="bg-gradient-to-r from-green-100 to-blue-100 min-h-screen flex items-center justify-center px-4">
+      <div className="absolute top-5 left-5 z-0">
+        <button
+          onClick={() => navigate("/phr/profile")}
+          className=" hover:underline text-xl mb-4 flex items-center"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Back
+        </button>
+      </div>
+      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
+        <h2 className="text-3xl font-bold mb-6 text-gray-800 text-center">
           Patient Details
         </h2>
-        <form onSubmit={handleSave}>
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              First Name:
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.name
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.name && (
-              <span className="text-red-500 text-sm">{errors.name}</span>
-            )}
+        <form onSubmit={handleSave} className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                First Name:
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                  errors.name
+                    ? "border-red-500"
+                    : "focus:ring-2 focus:ring-green-500"
+                }`}
+              />
+              {errors.name && (
+                <span className="text-red-500 text-sm">{errors.name}</span>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Last Name:
+              </label>
+              <input
+                type="text"
+                value={family}
+                onChange={(e) => setFamily(e.target.value)}
+                className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                  errors.family
+                    ? "border-red-500"
+                    : "focus:ring-2 focus:ring-green-500"
+                }`}
+              />
+              {errors.family && (
+                <span className="text-red-500 text-sm">{errors.family}</span>
+              )}
+            </div>
           </div>
 
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Last Name:
-            </label>
-            <input
-              type="text"
-              value={family}
-              onChange={(e) => setFamily(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.family
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.family && (
-              <span className="text-red-500 text-sm">{errors.family}</span>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Gender:
+              </label>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                  errors.gender
+                    ? "border-red-500"
+                    : "focus:ring-2 focus:ring-green-500"
+                }`}
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="unknown">Unknown</option>
+              </select>
+              {errors.gender && (
+                <span className="text-red-500 text-sm">{errors.gender}</span>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Birth Date:
+              </label>
+              <input
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                  errors.birthDate
+                    ? "border-red-500"
+                    : "focus:ring-2 focus:ring-green-500"
+                }`}
+              />
+              {errors.birthDate && (
+                <span className="text-red-500 text-sm">{errors.birthDate}</span>
+              )}
+            </div>
           </div>
 
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Gender:
-            </label>
-            <select
-              value={gender}
-              onChange={(e) => setGender(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.gender
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            >
-              <option value="">Select Gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-              <option value="unknown">Unknown</option>
-            </select>
-            {errors.gender && (
-              <span className="text-red-500 text-sm">{errors.gender}</span>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Phone:
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                  errors.phone
+                    ? "border-red-500"
+                    : "focus:ring-2 focus:ring-green-500"
+                }`}
+              />
+              {errors.phone && (
+                <span className="text-red-500 text-sm">{errors.phone}</span>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Email:
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                  errors.email
+                    ? "border-red-500"
+                    : "focus:ring-2 focus:ring-green-500"
+                }`}
+              />
+              {errors.email && (
+                <span className="text-red-500 text-sm">{errors.email}</span>
+              )}
+            </div>
           </div>
 
-          <div className="mb-4">
+          <div>
             <label className="block text-gray-700 font-semibold mb-2">
-              Birth Date:
+              Address:
             </label>
-            <input
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.birthDate
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.birthDate && (
-              <span className="text-red-500 text-sm">{errors.birthDate}</span>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Phone:
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.phone
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.phone && (
-              <span className="text-red-500 text-sm">{errors.phone}</span>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Email:
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.email
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.email && (
-              <span className="text-red-500 text-sm">{errors.email}</span>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Address Line:
-            </label>
-            <input
-              type="text"
+            <textarea
               value={addressLine}
               onChange={(e) => setAddressLine(e.target.value)}
               className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
@@ -842,85 +721,113 @@ const PatientForm: React.FC = () => {
                   ? "border-red-500"
                   : "focus:ring-2 focus:ring-green-500"
               }`}
-            />
+              // rows="2"
+            ></textarea>
             {errors.addressLine && (
               <span className="text-red-500 text-sm">{errors.addressLine}</span>
             )}
           </div>
 
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              City:
-            </label>
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.city
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.city && (
-              <span className="text-red-500 text-sm">{errors.city}</span>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                City:
+              </label>
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                  errors.city
+                    ? "border-red-500"
+                    : "focus:ring-2 focus:ring-green-500"
+                }`}
+              />
+              {errors.city && (
+                <span className="text-red-500 text-sm">{errors.city}</span>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                State:
+              </label>
+              <input
+                type="text"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                  errors.state
+                    ? "border-red-500"
+                    : "focus:ring-2 focus:ring-green-500"
+                }`}
+              />
+              {errors.state && (
+                <span className="text-red-500 text-sm">{errors.state}</span>
+              )}
+            </div>
           </div>
 
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              State:
-            </label>
-            <input
-              type="text"
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.state
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.state && (
-              <span className="text-red-500 text-sm">{errors.state}</span>
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Postal Code:
+              </label>
+              <input
+                type="text"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                  errors.postalCode
+                    ? "border-red-500"
+                    : "focus:ring-2 focus:ring-green-500"
+                }`}
+              />
+              {errors.postalCode && (
+                <span className="text-red-500 text-sm">
+                  {errors.postalCode}
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Country:
+              </label>
+              <input
+                type="text"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
+                  errors.country
+                    ? "border-red-500"
+                    : "focus:ring-2 focus:ring-green-500"
+                }`}
+              />
+              {errors.country && (
+                <span className="text-red-500 text-sm">{errors.country}</span>
+              )}
+            </div>
           </div>
 
-          <div className="mb-4">
+          <div>
             <label className="block text-gray-700 font-semibold mb-2">
-              Postal Code:
+              Managing Organization:
             </label>
             <input
               type="text"
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
+              value={managingOrganization}
+              onChange={(e) => setManagingOrganization(e.target.value)}
               className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.postalCode
+                errors.patientGuardianName
                   ? "border-red-500"
                   : "focus:ring-2 focus:ring-green-500"
               }`}
             />
-            {errors.postalCode && (
-              <span className="text-red-500 text-sm">{errors.postalCode}</span>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Country:
-            </label>
-            <input
-              type="text"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className={`w-full px-4 py-2 border rounded-md focus:outline-none ${
-                errors.country
-                  ? "border-red-500"
-                  : "focus:ring-2 focus:ring-green-500"
-              }`}
-            />
-            {errors.country && (
-              <span className="text-red-500 text-sm">{errors.country}</span>
+            {errors.patientGuardianName && (
+              <span className="text-red-500 text-sm">
+                {errors.patientGuardianName}
+              </span>
             )}
           </div>
 
@@ -932,63 +839,7 @@ const PatientForm: React.FC = () => {
           </button>
         </form>
 
-        {/* <div className="mt-6">
-          <label className="block text-gray-700 font-semibold mb-2">
-            Reveal Token:
-          </label>
-          <button
-            onClick={handleReveal}
-            className="mt-2 bg-green-500 text-white font-bold px-4 py-2 rounded-md hover:bg-green-600 focus:outline-none"
-          >
-            Reveal Data
-          </button>
-        </div> */}
-
-        {/* {JsonResult && (
-          <div className="mt-4">
-            <button
-              onClick={handleReveal}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Reveal Original Data
-            </button>
-
-            {showTokenInput && (
-              <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
-                <div className="bg-white p-6 rounded-lg shadow-lg">
-                  <h3 className="text-lg font-semibold mb-4">
-                    Enter Reveal Token
-                  </h3>
-                  <input
-                    type="text"
-                    value={inputToken}
-                    onChange={(e) =>
-                      setInputToken(e.target.value.toUpperCase())
-                    }
-                    placeholder="Enter token"
-                    className="border p-2 mb-4 w-full"
-                  />
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setShowTokenInput(false)}
-                      className="bg-gray-500 text-white px-4 py-2 rounded"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleTokenSubmit}
-                      className="bg-blue-500 text-white px-4 py-2 rounded"
-                    >
-                      Submit
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )} */}
-
-        <div className="bg-gray-100 p-6 rounded-lg shadow-inner w-full max-w-lg mt-4">
+        <div className="bg-gray-100 p-6 rounded-lg shadow-inner w-full mt-6">
           <h2 className="text-xl font-bold text-gray-800 mb-4">
             Resulting JSON:
           </h2>

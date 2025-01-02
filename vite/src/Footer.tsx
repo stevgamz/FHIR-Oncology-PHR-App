@@ -1,4 +1,21 @@
+import { useEffect, useState } from "react";
+import { auth, db } from "./Firebase";
+import { doc, getDoc } from "firebase/firestore";
+
 function footer() {
+  const [users, setUsers] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchData = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+        const phrId = phrDoc.data()?.phrId;
+        phrId ? setUsers(true) : setUsers(false);
+      }
+    });
+    return () => fetchData();
+  }, []);
+
   return (
     <div id="footer">
       <footer className="bg-black text-white py-8">
@@ -9,7 +26,7 @@ function footer() {
               <ul>
                 <li>
                   <a
-                    href="/phr"
+                    href="/"
                     className="text-gray-400 hover:text-white"
                     onClick={(e) => {
                       e.preventDefault();
@@ -17,7 +34,9 @@ function footer() {
                       if (homeElement) {
                         homeElement.scrollIntoView({ behavior: "smooth" });
                       } else {
-                        window.location.href = "/phr";
+                        users
+                          ? window.location.replace("/phr")
+                          : window.location.replace("/");
                       }
                     }}
                   >
@@ -26,7 +45,7 @@ function footer() {
                 </li>
                 <li>
                   <a
-                    href="/phr"
+                    href="/"
                     className="text-gray-400 hover:text-white"
                     onClick={(e) => {
                       e.preventDefault();
@@ -34,7 +53,9 @@ function footer() {
                       if (homeElement) {
                         homeElement.scrollIntoView({ behavior: "smooth" });
                       } else {
-                        window.location.href = "/phr";
+                        users
+                          ? window.location.replace("/phr")
+                          : window.location.replace("/");
                       }
                     }}
                   >
@@ -48,7 +69,7 @@ function footer() {
                 </li> */}
                 <li>
                   <a
-                    href="/profile"
+                    href="/phr/profile"
                     className="text-gray-400 hover:text-white"
                     onClick={(e) => {
                       e.preventDefault();
@@ -56,7 +77,7 @@ function footer() {
                       if (homeElement) {
                         homeElement.scrollIntoView({ behavior: "smooth" });
                       } else {
-                        window.location.href = "/profile";
+                        window.location.href = "/phr/profile";
                       }
                     }}
                   >

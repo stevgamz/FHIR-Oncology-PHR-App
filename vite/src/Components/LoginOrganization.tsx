@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useAuth } from "./useAuth";
 import { useNavigate } from "react-router-dom";
 
-const Admin = () => {
-  const { loginAdmin } = useAuth();
+const LoginOrganization = () => {
+  const { loginOrganization } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -12,7 +12,7 @@ const Admin = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await loginAdmin(email, password);
+      await loginOrganization(email, password);
       navigate("/admin/dashboard");
     } catch (error) {
       setError("Invalid email or password");
@@ -110,4 +110,4 @@ const Admin = () => {
   );
 };
 
-export default Admin;
+export default LoginOrganization;
