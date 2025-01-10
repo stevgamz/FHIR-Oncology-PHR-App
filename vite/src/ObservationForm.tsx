@@ -3,7 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "./Firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { createObservation, readPatient } from "./FhirService";
+import {
+  createObservation,
+  readObservationByPatientId,
+  readPatient,
+} from "./FhirService";
 import "./index.css";
 
 interface PatientDataProps {
@@ -64,6 +68,7 @@ const ObservationForm: React.FC = () => {
     null
   );
   const navigate = useNavigate();
+  const [observationData, setObservationData] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -79,6 +84,11 @@ const ObservationForm: React.FC = () => {
             const patient = await readPatient(fhirId, storedMapping);
             setPatientData(patient);
             console.log("Patient data:", patient);
+
+            readObservationByPatientId(fhirId).then((data) => {
+              setObservationData(data);
+              console.log("Observation data:", data);
+            });
           } else {
             console.error("PHR ID does not exist in the database");
           }
@@ -558,7 +568,7 @@ const ObservationForm: React.FC = () => {
   };
 
   return (
-    <div className="bg-gradient-to-r from-purple-100 to-blue-100 min-h-screen flex items-center justify-center">
+    <div className="bg-gradient-to-r from-purple-100 to-blue-100 min-h-screen flex flex-col items-center justify-center">
       <button
         style={{
           padding: "10px 15px",
@@ -829,6 +839,22 @@ const ObservationForm: React.FC = () => {
           </div>
         )}
       </div>
+      {/* Observation Data */}
+      {observationData && (
+        <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg mt-8">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800">
+            Observation Data
+          </h2>
+          <div className="mt-4">
+            {/* {Object.entries(observationData).map(([key, value]) => (
+              <div key={key} className="mb-4">
+                <h4 className="font-bold text-gray-700">{key}:</h4>
+                <p className="text-gray-600">{String(value)}</p>
+              </div>
+            ))} */}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

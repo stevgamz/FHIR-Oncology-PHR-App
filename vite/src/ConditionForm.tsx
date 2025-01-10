@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "./Firebase";
 import "./index.css";
 import { createCondition, readPatient } from "./FhirService";
+import { useNavigate } from "react-router-dom";
 
 interface Symptom {
   name: string;
@@ -525,6 +526,7 @@ const ConditionForm: React.FC = () => {
 
   const [clinicalStatus, setClinicalStatus] = useState<string>("");
   const [patientData, setPatientData] = useState<any>();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -634,17 +636,64 @@ const ConditionForm: React.FC = () => {
       return;
     }
 
-    try {
-      const savedConditions = await Promise.all(
-        conditionResources.map(createCondition)
-      );
-      setConditions({ ...conditions });
-      setJsonResult(savedConditions);
-      console.log("Saved Conditions:", savedConditions);
-    } catch (error) {
-      console.error("Error saving conditions:", error);
-      alert("Failed to save conditions. Please try again.");
-    }
+    const newConditions = {
+      url: `https://hapi.fhir.tw/fhir/Condition?subject=Patient/${patientData?.id}`,
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const phrDoc = await getDoc(doc(db, "PHR", user.uid));
+        const phrId = phrDoc.data()?.phrId;
+        const patientDocRef = doc(db, "Patient", phrId);
+        const patientDoc = await getDoc(patientDocRef);
+
+        if (!phrId) {
+          console.error("PHR ID does not exist in the database");
+          return;
+        } else {
+          await setDoc(patientDocRef, {
+            fhirId: patientData?.id,
+            name: [
+              {
+                use: "official",
+                family: patientData?.name?.[0]?.family ?? "",
+                given: [patientData?.name?.[0]?.given?.[0] ?? ""],
+              },
+            ],
+            telecom: [
+              {
+                system: "phone",
+                value: patientData?.telecom?.[0].value ?? "",
+              },
+              {
+                system: "email",
+                value: patientData?.telecom?.[1].value ?? "",
+              },
+            ],
+            birthDate: patientData?.birthDate ?? "",
+            gender: patientData?.gender ?? "",
+            country: patientData?.address?.[0]?.country ?? "",
+            managingOrganization: {
+              reference: patientData?.managingOrganization?.reference ?? "",
+            },
+            observations: patientDoc.data()?.observations ?? [],
+            conditions: newConditions,
+          });
+
+          try {
+            const savedConditions = await Promise.all(
+              conditionResources.map(createCondition)
+            );
+            setConditions({ ...conditions });
+            setJsonResult(savedConditions);
+            console.log("Saved Conditions:", savedConditions);
+          } catch (error) {
+            console.error("Error saving conditions:", error);
+            alert("Failed to save conditions. Please try again.");
+          }
+        }
+      }
+    });
   };
 
   const [errors, setErrors] = useState<Errors>({});
@@ -652,6 +701,40 @@ const ConditionForm: React.FC = () => {
 
   return (
     <div className="bg-gradient-to-r from-green-100 to-blue-100 min-h-screen flex items-center justify-center">
+      <button
+        style={{
+          padding: "10px 15px",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          fontSize: "1rem",
+          fontWeight: "bold",
+          color: "#000",
+          position: "fixed",
+          left: "50px",
+          top: "50px",
+        }}
+        onClick={() => {
+          navigate("/phr");
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          style={{ marginRight: "5px" }}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        Back
+      </button>
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-3xl">
         <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">
           Condition Form

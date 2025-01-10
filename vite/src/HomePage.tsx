@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "./Firebase";
-import { readPatient } from "./FhirService";
+import {
+  deleteConditionByPatientId,
+  deleteObservationByPatientId,
+  readPatient,
+} from "./FhirService";
 import { doc, getDoc } from "firebase/firestore";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
@@ -62,6 +66,12 @@ const HomePage = () => {
         autoClose: 3000,
       });
     }
+  };
+
+  const deleteCondition = (id: string) => {
+    // id = "IDegl1656";
+    deleteConditionByPatientId(id);
+    deleteObservationByPatientId(id);
   };
 
   return (
@@ -144,6 +154,13 @@ const HomePage = () => {
             className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-lg transition"
           >
             <p className="text-teal-600 font-bold">Condition Form</p>
+            <i className="fas fa-arrow-right text-teal-500 mt-2"></i>
+          </button>
+          <button
+            onClick={() => deleteCondition("ID4175816")}
+            className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-lg transition"
+          >
+            <p className="text-teal-600 font-bold">Delete Condition</p>
             <i className="fas fa-arrow-right text-teal-500 mt-2"></i>
           </button>
         </div>

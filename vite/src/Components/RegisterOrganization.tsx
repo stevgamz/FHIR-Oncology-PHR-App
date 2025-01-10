@@ -3,7 +3,7 @@ import { useAuth } from "./useAuth";
 import { useNavigate } from "react-router-dom";
 import { db } from "../Firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { createOrganization } from "../FhirService";
+import { createOrganization, readOrganization } from "../FhirService";
 import { toast } from "react-toastify";
 
 interface Organization {
@@ -57,6 +57,8 @@ const RegisterOrganization = () => {
 
     const errors: OrganizationError = {};
     if (!name) errors.name = "Organization name is required";
+    const organizationExists = await readOrganization(name);
+    if (organizationExists) errors.name = "Organization name already exists";
     if (!country) errors.country = "Country is required";
 
     if (Object.keys(errors).length > 0) {

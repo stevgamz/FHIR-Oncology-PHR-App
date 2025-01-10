@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { readPatient } from "../FhirService";
+import { readObservationByPatientId, readPatient } from "../FhirService";
 import { useAuth } from "./useAuth";
 import { auth, db } from "../Firebase";
 import {
@@ -16,13 +16,14 @@ import { toast } from "react-toastify";
 const OrganizationDashboard = () => {
   const navigate = useNavigate();
   const { token, logout } = useAuth();
-  const [users, setUsers] = useState<any>(null);
+  const [patients, setPatients] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [showTokenModal, setShowTokenModal] = useState(false);
-  const [selectUser, setSelectUser] = useState<any>(null);
+  const [selectPatient, setSelectPatient] = useState<any>(null);
   const [adminToken, setAdminToken] = useState<string>("");
   const [detailError, setDetailError] = useState<string | null>(null);
   const [adminName, setAdminName] = useState<string | null>(null);
+  const [adminCountry, setAdminCountry] = useState<string | null>(null);
   // const [notifications, setNotifications] = useState<string[]>([]);
 
   const fetchData = async () => {
@@ -40,15 +41,15 @@ const OrganizationDashboard = () => {
           const organizationName = organizationDoc.name;
           setAdminName(organizationName);
           if (token) {
-            const userCollection = collection(db, "Patient");
-            const usersSnapshot = await getDocs(userCollection);
-            const usersList = usersSnapshot.docs
+            const patientCollection = collection(db, "Patient");
+            const patientSnapshot = await getDocs(patientCollection);
+            const patientList = patientSnapshot.docs
               .map((doc) => ({
                 id: doc.id,
                 ...doc.data(),
               }))
               .filter((user: any) => user.country === organizationDoc.country);
-            setUsers(usersList);
+            setPatients(patientList);
           } else {
             setError("Token not found");
           }
@@ -61,19 +62,19 @@ const OrganizationDashboard = () => {
   };
 
   const processedpatients = useRef(new Set());
+  // let adminCountry = "";
   useEffect(() => {
-    let adminCountry = "";
     const fetchCountry = async () => {
-      const user = auth.currentUser;
-      if (user) {
+      const organization = auth.currentUser;
+      if (organization) {
         const organizationData = await getDocs(collection(db, "Organizations"));
         const organizationDoc = organizationData.docs
           .find((doc) => {
-            return doc.data().email === user.email;
+            return doc.data().email === organization.email;
           })
           ?.data();
         if (organizationDoc) {
-          adminCountry = organizationDoc.country;
+          setAdminCountry(organizationDoc.country);
         }
       }
     };
@@ -124,7 +125,7 @@ const OrganizationDashboard = () => {
   const handleShowDetail = async (user: any) => {
     setAdminToken("");
     setShowTokenModal(true);
-    setSelectUser(user);
+    setSelectPatient(user);
 
     if (user.fhirId) {
       try {
@@ -166,8 +167,8 @@ const OrganizationDashboard = () => {
   };
 
   const handleTokenSubmit = async () => {
-    if (!selectUser) return;
-    const userDoc = await getDoc(doc(db, "Patient", selectUser.id));
+    if (!selectPatient) return;
+    const userDoc = await getDoc(doc(db, "Patient", selectPatient.id));
     const userData = userDoc.data();
     const fhirId = userData?.fhirId;
 
@@ -182,7 +183,14 @@ const OrganizationDashboard = () => {
     const hashMapping = detailsDoc.data()?.mapping;
     const unhashedPatient = await readPatient(fhirId, hashMapping);
 
-    setSelectUser({ ...unhashedPatient, details: unhashedPatient });
+    const observations = await readObservationByPatientId(fhirId);
+    console.log(observations, "observations");
+
+    setSelectPatient({
+      ...unhashedPatient,
+      details: unhashedPatient,
+      observations,
+    });
     setShowTokenModal(false);
     setDetailError(null);
   };
@@ -242,38 +250,8 @@ const OrganizationDashboard = () => {
         >
           Admin Dashboard
         </h2>
-        {/* <div>
-          {notifications.map((notification, index) => (
-            <div
-              key={index}
-              style={{
-                backgroundColor: "#e0ffe0",
-                padding: "10px",
-                margin: "10px 0",
-                borderRadius: "5px",
-                position: "relative",
-              }}
-            >
-              {notification}
-              <button
-                onClick={() => removeNotification(index)}
-                style={{
-                  position: "absolute",
-                  top: "5px",
-                  right: "10px",
-                  background: "none",
-                  border: "none",
-                  fontSize: "16px",
-                  cursor: "pointer",
-                }}
-              >
-                &times;
-              </button>
-            </div>
-          ))}
-        </div> */}
         <div>
-          {users ? (
+          {patients ? (
             <table
               style={{
                 width: "100%",
@@ -309,12 +287,12 @@ const OrganizationDashboard = () => {
                       backgroundColor: "#f9f9f9",
                     }}
                   >
-                    URL
+                    Condition
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user: any) => (
+                {patients.map((user: any) => (
                   <tr key={user.id}>
                     <td
                       style={{
@@ -352,7 +330,18 @@ const OrganizationDashboard = () => {
                         wordBreak: "break-word",
                       }}
                     >
-                      {user.observations?.url || "N/A"}
+                      {user.conditions?.url ? (
+                        <a
+                          href={user.conditions.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: "#007bff" }}
+                        >
+                          {user.conditions.url}
+                        </a>
+                      ) : (
+                        "N/A"
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -438,7 +427,7 @@ const OrganizationDashboard = () => {
         )}
       </div>
 
-      {selectUser && selectUser.details && (
+      {selectPatient && selectPatient.details && (
         <div
           style={{
             position: "fixed",
@@ -452,8 +441,7 @@ const OrganizationDashboard = () => {
         >
           <div
             style={{
-              width: "90%",
-              maxWidth: "1000px",
+              width: "40%",
               height: "auto",
               padding: "20px",
               borderRadius: "10px",
@@ -468,7 +456,7 @@ const OrganizationDashboard = () => {
                 marginBottom: "10px",
               }}
             >
-              Details for Patient #{selectUser.id}
+              Details for Patient #{selectPatient.id}
             </h3>
             <div
               style={{
@@ -480,26 +468,26 @@ const OrganizationDashboard = () => {
               }}
             >
               <p>
-                <strong>Name:</strong> {selectUser.name?.[0]?.given?.[0]}{" "}
-                {selectUser.name?.[0]?.family}
+                <strong>Name:</strong> {selectPatient.name?.[0]?.given?.[0]}{" "}
+                {selectPatient.name?.[0]?.family}
               </p>
               <p>
-                <strong>Given:</strong> {selectUser.name?.[0]?.given?.[0]}
+                <strong>Given:</strong> {selectPatient.name?.[0]?.given?.[0]}
               </p>
               <p>
-                <strong>Family:</strong> {selectUser.name?.[0]?.family}
+                <strong>Family:</strong> {selectPatient.name?.[0]?.family}
               </p>
               <p>
-                <strong>Gender:</strong> {selectUser.gender}
+                <strong>Gender:</strong> {selectPatient.gender}
               </p>
               <p>
-                <strong>Birth Date:</strong> {selectUser.birthDate}
+                <strong>Birth Date:</strong> {selectPatient.birthDate}
               </p>
               <p>
-                <strong>Phone:</strong> {selectUser.telecom?.[0]?.value}
+                <strong>Phone:</strong> {selectPatient.telecom?.[0]?.value}
               </p>
               <p>
-                <strong>Email:</strong> {selectUser.telecom?.[1]?.value}
+                <strong>Email:</strong> {selectPatient.telecom?.[1]?.value}
               </p>
             </div>
             <button
@@ -511,11 +499,253 @@ const OrganizationDashboard = () => {
                 borderRadius: "5px",
                 cursor: "pointer",
               }}
-              onClick={() => setSelectUser(null)}
+              onClick={() => setSelectPatient(null)}
             >
               Back
             </button>
           </div>
+          {selectPatient.observations && (
+            <div
+              style={{
+                width: "50%",
+                height: "auto",
+                padding: "20px",
+                borderRadius: "10px",
+                backgroundColor: "white",
+                marginLeft: "20px",
+              }}
+            >
+              <h3
+                style={{
+                  color: "#333",
+                  fontSize: "20px",
+                  fontWeight: "bold",
+                  marginBottom: "10px",
+                  textAlign: "center",
+                }}
+              >
+                Observation Data
+              </h3>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  marginTop: "20px",
+                  fontSize: "18px",
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th
+                      style={{
+                        padding: "10px",
+                        border: "1px solid #ddd",
+                        backgroundColor: "#f9f9f9",
+                      }}
+                    >
+                      Date
+                    </th>
+                    <th
+                      style={{
+                        padding: "10px",
+                        border: "1px solid #ddd",
+                        backgroundColor: "#f9f9f9",
+                      }}
+                    >
+                      Code
+                    </th>
+                    <th
+                      style={{
+                        padding: "10px",
+                        border: "1px solid #ddd",
+                        backgroundColor: "#f9f9f9",
+                      }}
+                    >
+                      Value
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectPatient.observations.map(
+                    (observation: any, index: number) => {
+                      const formattedDate = new Intl.DateTimeFormat("en-GB", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      }).format(new Date(observation.effectiveDateTime));
+
+                      const convertUnit = (value: number, unit: string) => {
+                        if (adminCountry === "America") {
+                          if (observation.code?.text === "Body Weight") {
+                            return { value: value * 2.20462, unit: "lbs" };
+                          } else if (observation.code?.text === "Body Height") {
+                            return { value: value * 0.393701, unit: "in" };
+                          } else if (
+                            observation.code?.text === "Body Temperature"
+                          ) {
+                            return { value: (value * 9) / 5 + 32, unit: "°F" };
+                          }
+                        }
+                        return { value, unit };
+                      };
+
+                      return observation.component ? (
+                        // Jika memiliki komponen, tampilkan detailnya
+                        observation.component.map(
+                          (component: any, compIndex: number) => (
+                            <tr key={`${index}-${compIndex}`}>
+                              <td
+                                style={{
+                                  padding: "10px",
+                                  border: "1px solid #ddd",
+                                }}
+                              >
+                                {/* {observation.effectiveDateTime} */}
+                                {formattedDate}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "10px",
+                                  border: "1px solid #ddd",
+                                }}
+                              >
+                                {component.code?.coding?.[0]?.display || "N/A"}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "10px",
+                                  border: "1px solid #ddd",
+                                }}
+                              >
+                                {component.valueQuantity?.value || "N/A"}{" "}
+                                {component.valueQuantity?.unit || ""}
+                              </td>
+                            </tr>
+                          )
+                        )
+                      ) : (
+                        <tr key={index}>
+                          <td
+                            style={{
+                              padding: "10px",
+                              border: "1px solid #ddd",
+                            }}
+                          >
+                            {/* {observation.effectiveDateTime} */}
+                            {formattedDate}
+                          </td>
+                          <td
+                            style={{
+                              padding: "10px",
+                              border: "1px solid #ddd",
+                            }}
+                          >
+                            {observation.code?.text || "N/A"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "10px",
+                              border: "1px solid #ddd",
+                            }}
+                          >
+                            {/* {observation.valueQuantity?.value || "N/A"}{" "}
+                            {observation.valueQuantity?.unit || ""} */}
+                            {convertUnit(
+                              observation.valueQuantity?.value,
+                              observation.valueQuantity?.unit
+                            ).value || "N/A"}{" "}
+                            {convertUnit(
+                              observation.valueQuantity?.value,
+                              observation.valueQuantity?.unit
+                            ).unit || ""}
+                          </td>
+                        </tr>
+                      );
+
+                      // return observation.component ? (
+                      //   observation.component.map(
+                      //     (component: any, compIndex: number) => {
+                      //       const { value, unit } =
+                      //         component.code?.coding?.[0]?.display ===
+                      //         "Blood Pressure"
+                      //           ? {
+                      //               value: component.valueQuantity?.value,
+                      //               unit: component.valueQuantity?.unit,
+                      //             } // Tidak berubah untuk tekanan darah
+                      //           : convertUnit(
+                      //               component.valueQuantity?.value,
+                      //               component.valueQuantity?.unit
+                      //             );
+
+                      //       return (
+                      //         <tr key={`${index}-${compIndex}`}>
+                      //           <td
+                      //             style={{
+                      //               padding: "10px",
+                      //               border: "1px solid #ddd",
+                      //             }}
+                      //           >
+                      //             {formattedDate}
+                      //           </td>
+                      //           <td
+                      //             style={{
+                      //               padding: "10px",
+                      //               border: "1px solid #ddd",
+                      //             }}
+                      //           >
+                      //             {component.code?.coding?.[0]?.display ||
+                      //               "N/A"}
+                      //           </td>
+                      //           <td
+                      //             style={{
+                      //               padding: "10px",
+                      //               border: "1px solid #ddd",
+                      //             }}
+                      //           >
+                      //             {value || "N/A"} {unit || ""}
+                      //           </td>
+                      //         </tr>
+                      //       );
+                      //     }
+                      //   )
+                      // ) : (
+                      //   <tr key={index}>
+                      //     <td
+                      //       style={{
+                      //         padding: "10px",
+                      //         border: "1px solid #ddd",
+                      //       }}
+                      //     >
+                      //       {formattedDate}
+                      //     </td>
+                      //     <td
+                      //       style={{
+                      //         padding: "10px",
+                      //         border: "1px solid #ddd",
+                      //       }}
+                      //     >
+                      //       {observation.code?.text || "N/A"}
+                      //     </td>
+                      //     <td
+                      //       style={{
+                      //         padding: "10px",
+                      //         border: "1px solid #ddd",
+                      //       }}
+                      //     >
+                      //       {observation.valueQuantity?.value || "N/A"}{" "}
+                      //       {observation.valueQuantity?.unit || ""}
+                      //     </td>
+                      //   </tr>
+                      // );
+                    }
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

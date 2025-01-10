@@ -709,3 +709,33 @@ export const readOrganization = async (name: string): Promise<any> => {
 
   return organization.resource.id;
 };
+
+export const deleteConditionByPatientId = async (
+  id: string
+): Promise<Response> => {
+  const response = await fetch(`${baseUrl}/Condition?patient=${id}`, {
+    method: "DELETE",
+  });
+  return response;
+};
+
+export const deleteObservationByPatientId = async (
+  id: string
+): Promise<Response> => {
+  const response = await fetch(`${baseUrl}/Observation?patient=${id}`, {
+    method: "DELETE",
+  });
+  return response;
+};
+
+export const readObservationByPatientId = async (id: string): Promise<any> => {
+  const response = await fetch(`${baseUrl}/Observation?patient=${id}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/fhir+json",
+    },
+  });
+
+  const data = await response.json();
+  return data.entry?.map((entry: any) => entry.resource);
+};
